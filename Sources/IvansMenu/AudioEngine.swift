@@ -15,7 +15,10 @@ final class AudioEngine {
               let url = Bundle.module.url(forResource: cue.rawValue,
                                           withExtension: "caf", subdirectory: "Resources/Sounds")
         else { return }
-        NSSound(contentsOf: url, byReference: true)?.play()
+        let sound = NSSound(contentsOf: url, byReference: true)
+        // The hover blip fires constantly, so keep it soft and unobtrusive.
+        sound?.volume = (cue == .hover) ? 0.22 : 0.5
+        sound?.play()
     }
 
     func startMusic() {

@@ -89,9 +89,9 @@ final class BottomBarView: NSView {
 
     private func drawClock() {
         let w = bounds.width, h = bounds.height
-        let clockRect = NSRect(x: w/2 - 140, y: h * 0.38, width: 280, height: h * 0.34)
+        let clockRect = NSRect(x: w/2 - 170, y: h * 0.38, width: 340, height: h * 0.34)
         WiiDraw.sevenSegment(hour: curHour, minute: curMinute, blinkOn: blinkOn,
-                             twentyFourHour: true, in: clockRect, color: .wiiClock)
+                             twentyFourHour: false, in: clockRect, color: .wiiClock)
     }
 
     private func drawSDGlyph() {

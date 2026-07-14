@@ -5,6 +5,7 @@ import IvansMenuKit
 final class WiiMenuView: NSView {
     var onLaunch: (Channel) -> Void = { _ in }
     var onWii: () -> Void = {}
+    var onEditChannel: (Int, ChannelEdit) -> Void = { _, _ in }
 
     private let config: AppConfig
     private let renderer: BannerRenderer
@@ -66,6 +67,7 @@ final class WiiMenuView: NSView {
             let img = renderer.image(for: channel, size: NSSize(width: 360, height: 198))
             let tile = ChannelTileView(channel: channel, image: img)
             tile.onLaunch = { [weak self] c in self?.onLaunch(c) }
+            tile.onEdit = { [weak self] slot, kind in self?.onEditChannel(slot, kind) }
             gridContainer.addSubview(tile)
             tiles.append(tile)
         }

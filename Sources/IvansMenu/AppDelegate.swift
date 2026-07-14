@@ -57,6 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let menu = WiiMenuView(config: self.config, renderer: renderer)
         menu.onWii = { [weak self] in self?.showSettings() }
         menu.onLaunch = { [weak self] channel in self?.launch(channel) }
+        menu.onEditChannel = { [weak self] slot, kind in self?.editChannel(slot: slot, kind: kind) }
         return menu
     }
 
@@ -166,6 +167,56 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func launch(_ channel: Channel) {
         _ = Launcher(workspace: SystemWorkspace()).launch(channel.action)
+    }
+
+    /// Configure a channel in place from its right-click menu, then refresh.
+    func editChannel(slot: Int, kind: ChannelEdit) {
+        NSApp.activate(ignoringOtherApps: true)
+        guard let i = settingsVM.config.channels.firstIndex(where: { $0.slot == slot }) else { return }
+        switch kind {
+        case .app:
+            let p = NSOpenPanel()
+            p.directoryURL = URL(fileURLWithPath: "/Applications")
+            p.allowedContentTypes = [.application]
+            guard p.runModal() == .OK, let url = p.url else { return }
+            settingsVM.config.channels[i].action = .app(path: url.path)
+            if settingsVM.config.channels[i].title == nil {
+                settingsVM.config.channels[i].title = url.deletingPathExtension().lastPathComponent
+            }
+        case .url:
+            guard let s = promptText("Open website", placeholder: "https://…",
+                                     initial: ""), !s.isEmpty else { return }
+            settingsVM.config.channels[i].action = .url(s)
+        case .thumbnail:
+            let p = NSOpenPanel()
+            p.message = "Choose a channel thumbnail (PNG, JPEG, or animated GIF)"
+            p.allowedContentTypes = [.image, .gif, .png, .jpeg]
+            guard p.runModal() == .OK, let url = p.url else { return }
+            settingsVM.config.channels[i].banner = .custom(path: url.path)
+        case .title:
+            guard let s = promptText("Channel name", placeholder: "Name",
+                                     initial: settingsVM.config.channels[i].title ?? "") else { return }
+            settingsVM.config.channels[i].title = s.isEmpty ? nil : s
+        case .clear:
+            settingsVM.config.channels[i].action = .empty
+            settingsVM.config.channels[i].banner = .generated
+            settingsVM.config.channels[i].title = nil
+        }
+        settingsVM.save()
+        reloadMenu()
+    }
+
+    private func promptText(_ title: String, placeholder: String, initial: String) -> String? {
+        let alert = NSAlert()
+        alert.messageText = title
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 280, height: 24))
+        field.placeholderString = placeholder
+        field.stringValue = initial
+        alert.accessoryView = field
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Cancel")
+        NSApp.activate(ignoringOtherApps: true)
+        return alert.runModal() == .alertFirstButtonReturn ? field.stringValue : nil
     }
 
     /// Download the (third-party-hosted) Wii art pack into the user's theme

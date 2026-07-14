@@ -206,28 +206,42 @@ enum WiiDraw {
         return p
     }
 
-    /// Draw a 7-segment LCD clock "HH:MM" (colon blinks) centered in `rect`.
+    /// Draw a 7-segment LCD clock centered in `rect`. In 12-hour mode the leading
+    /// zero of the hour is blank and an AM/PM label follows the digits (like the Wii).
     static func sevenSegment(hour: Int, minute: Int, blinkOn: Bool,
                              twentyFourHour: Bool, in rect: NSRect, color: NSColor) {
+        let isPM = hour >= 12
         var h = hour
         if !twentyFourHour { h = hour % 12; if h == 0 { h = 12 } }
-        let digits = [h / 10, h % 10, minute / 10, minute % 10]
+        let hTens = h / 10, hOnes = h % 10
+        let blankTens = !twentyFourHour && hTens == 0
 
         let ch = rect.height
-        let cw = ch * 0.55            // digit cell width
+        let cw = ch * 0.55
         let colonW = cw * 0.42
         let gap = cw * 0.20
-        let total = cw * 4 + gap * 4 + colonW
+        let ampmW = twentyFourHour ? 0 : cw * 1.05
+        let total = cw * 4 + gap * 4 + colonW + ampmW
         var x = rect.midX - total / 2
         let y = rect.minY
         color.setFill()
 
-        drawDigit(digits[0], x: x, y: y, w: cw, h: ch); x += cw + gap
-        drawDigit(digits[1], x: x, y: y, w: cw, h: ch); x += cw + gap
+        if !blankTens { drawDigit(hTens, x: x, y: y, w: cw, h: ch) }
+        x += cw + gap
+        drawDigit(hOnes, x: x, y: y, w: cw, h: ch); x += cw + gap
         if blinkOn { drawColon(x: x, y: y, w: colonW, h: ch, color: color) }
         x += colonW + gap
-        drawDigit(digits[2], x: x, y: y, w: cw, h: ch); x += cw + gap
-        drawDigit(digits[3], x: x, y: y, w: cw, h: ch)
+        drawDigit(minute / 10, x: x, y: y, w: cw, h: ch); x += cw + gap
+        drawDigit(minute % 10, x: x, y: y, w: cw, h: ch); x += cw
+
+        if !twentyFourHour {
+            let label = NSAttributedString(string: isPM ? "PM" : "AM", attributes: [
+                .font: roundedFont(ofSize: ch * 0.42, weight: .semibold),
+                .foregroundColor: color,
+            ])
+            let ls = label.size()
+            label.draw(at: NSPoint(x: x + gap * 1.5, y: y + (ch - ls.height) / 2))
+        }
     }
 
     private static let segMap: [[Int]] = [

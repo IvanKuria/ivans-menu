@@ -14,6 +14,9 @@ final class WallpaperWindow: NSWindow {
         self.ignoresMouseEvents = false
         self.setFrame(screen.frame, display: true)
     }
-    override var canBecomeKey: Bool { true }
+    // Don't become key/main: clicks still register via the views' acceptsFirstMouse,
+    // but the window never steals focus or activates the app — which was causing the
+    // desktop to switch away and the cursor to flicker on interaction.
+    override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
 }
