@@ -44,6 +44,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if config.settings.peekHotKeyEnabled {
             hotKey = GlobalHotKey { [weak self] in self?.togglePeek() }
         }
+
+        AudioEngine.shared.soundEnabled = config.settings.soundEnabled
+        AudioEngine.shared.musicEnabled = config.settings.musicEnabled
+        AudioEngine.shared.startMusic()
     }
 
     func togglePeek() {

@@ -34,6 +34,7 @@ final class ChannelTileView: NSView {
     override func mouseExited(with event: NSEvent) { setHover(false) }
 
     private func setHover(_ on: Bool) {
+        if on { AudioEngine.shared.play(.hover) }
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = 0.4
             layer?.borderWidth = on ? 4 : 0
@@ -45,6 +46,7 @@ final class ChannelTileView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         guard !channel.isEmpty else { return }
+        AudioEngine.shared.play(.select)
         onLaunch(channel)
     }
 }
