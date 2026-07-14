@@ -19,6 +19,15 @@ enum ThemePackInstaller {
 
     struct Manifest: Decodable { let files: [String: String] }
 
+    /// A safe theme filename: no path separators, no `..`, image extension only.
+    private static func isSafeName(_ name: String) -> Bool {
+        guard !name.contains("/"), !name.contains("\\"),
+              !name.contains(".."), !name.contains("\0"), name.count <= 64 else { return false }
+        let ext = (name as NSString).pathExtension.lowercased()
+        guard ["png", "jpg", "jpeg", "gif"].contains(ext) else { return false }
+        return name.allSatisfy { $0.isLetter || $0.isNumber || $0 == "_" || $0 == "-" || $0 == "." }
+    }
+
     enum InstallError: Error, CustomStringConvertible {
         case badManifest, noFiles, network(String)
         var description: String {
@@ -55,16 +64,22 @@ enum ThemePackInstaller {
 
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
 
+            let dirBase = dir.standardizedFileURL.resolvingSymlinksInPath().path + "/"
             let group = DispatchGroup()
             let installed = Counter()
             for (name, urlString) in manifest.files {
-                guard let url = URL(string: urlString) else { continue }
+                // Reject unsafe filenames (path traversal) and non-https sources.
+                guard isSafeName(name),
+                      let url = URL(string: urlString), url.scheme?.lowercased() == "https"
+                else { continue }
+                let dest = dir.appendingPathComponent(name)
+                guard dest.standardizedFileURL.resolvingSymlinksInPath().path
+                        .hasPrefix(dirBase) else { continue }
                 group.enter()
                 progress("Downloading \(name)…")
                 session.dataTask(with: url) { fileData, _, _ in
                     defer { group.leave() }
                     guard let fileData else { return }
-                    let dest = dir.appendingPathComponent(name)
                     if (try? fileData.write(to: dest, options: .atomic)) != nil { installed.bump() }
                 }.resume()
             }
