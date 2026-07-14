@@ -43,5 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func showSettings() {}
 
-    func launch(_ channel: Channel) {}
+    func launch(_ channel: Channel) {
+        _ = Launcher(workspace: SystemWorkspace()).launch(channel.action)
+    }
 }
