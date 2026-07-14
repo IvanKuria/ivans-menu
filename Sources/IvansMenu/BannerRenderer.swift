@@ -30,20 +30,35 @@ final class BannerRenderer {
 
     private func generated(_ channel: Channel, size: NSSize) -> NSImage {
         let icon = appIcon(channel.action)
-        var bg = NSColor.wiiAccent
+        // Dominant color of the app icon → a gentle tint (not a saturated block).
+        var hue = NSColor.wiiAccent
         if let cg = icon?.cgImage(forProposedRect: nil, context: nil, hints: nil) {
             let c = DominantColor.average(of: cg)
-            bg = NSColor(srgbRed: c.r, green: c.g, blue: c.b, alpha: 1)
+            hue = NSColor(srgbRed: c.r, green: c.g, blue: c.b, alpha: 1)
         }
+        // Blend the hue heavily toward white for a soft "channel art panel" wash.
+        let top = hue.blended(withFraction: 0.72, of: .white) ?? .white
+        let bottom = NSColor.white
+
         let image = NSImage(size: size)
         image.lockFocus()
         let rect = NSRect(origin: .zero, size: size)
-        let radius = size.width * Theme.tileCornerFraction
-        let path = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
-        bg.setFill(); path.fill()
+        // Soft vertical wash: tinted at the top, white toward the label strip.
+        let wash = NSGradient(colors: [top, bottom, bottom],
+                              atLocations: [0, 0.82, 1], colorSpace: .sRGB)!
+        wash.draw(in: rect, angle: -90)
+        // A faint thin divider above the bottom "label" band, like a real channel.
+        NSColor(srgbRed: 0.85, green: 0.86, blue: 0.88, alpha: 1).setStroke()
+        let seam = NSBezierPath()
+        seam.move(to: NSPoint(x: rect.width * 0.06, y: rect.height * 0.2))
+        seam.line(to: NSPoint(x: rect.width * 0.94, y: rect.height * 0.2))
+        seam.lineWidth = 1
+        seam.stroke()
+        // Big app icon centered in the art panel (upper region).
         if let icon {
-            let s = min(size.width, size.height) * 0.55
-            let r = NSRect(x: (size.width - s)/2, y: (size.height - s)/2, width: s, height: s)
+            let s = min(size.width * 0.42, size.height * 0.66)
+            let r = NSRect(x: (size.width - s)/2, y: rect.height * 0.2 + (rect.height*0.8 - s)/2,
+                           width: s, height: s)
             icon.draw(in: r)
         }
         image.unlockFocus()

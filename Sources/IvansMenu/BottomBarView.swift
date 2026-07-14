@@ -9,45 +9,58 @@ final class BottomBarView: NSView {
     private let wave = WaveView()
     private let clock = NSTextField(labelWithString: "")
     private let dateLabel = NSTextField(labelWithString: "")
+    private let wiiButton = WiiOrbButton()
+    private let mailButton = WiiOrbButton()
     private nonisolated(unsafe) var timer: Timer?
-    private var blinkOn = true
+    private var blinkOn = false
 
     override init(frame: NSRect) { super.init(frame: frame); setup() }
     required init?(coder: NSCoder) { super.init(coder: coder); setup() }
+
+    override var isFlipped: Bool { false }
 
     private func setup() {
         wantsLayer = true
         layer?.backgroundColor = NSColor.wiiBottomBar.cgColor
         addSubview(wave)
 
-        clock.font = .monospacedDigitSystemFont(ofSize: 44, weight: .semibold)
+        clock.font = WiiDraw.roundedFont(ofSize: 48, weight: .semibold)
         clock.textColor = .wiiClock
         clock.alignment = .center
         addSubview(clock)
 
-        dateLabel.font = .systemFont(ofSize: 18, weight: .medium)
+        dateLabel.font = WiiDraw.roundedFont(ofSize: 19, weight: .medium)
         dateLabel.textColor = .wiiClock
         dateLabel.alignment = .center
         addSubview(dateLabel)
 
-        let wii = makeRoundButton(title: "Wii", action: #selector(wiiTapped))
-        wii.tag = 1; addSubview(wii)
-        let mail = makeRoundButton(title: "✉", action: #selector(mailTapped))
-        mail.tag = 2; addSubview(mail)
+        wiiButton.symbol = .wii
+        wiiButton.target = self; wiiButton.action = #selector(wiiTapped)
+        addSubview(wiiButton)
+
+        mailButton.symbol = .envelope
+        mailButton.target = self; mailButton.action = #selector(mailTapped)
+        addSubview(mailButton)
 
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated {
-                self?.tick()
-            }
+            MainActor.assumeIsolated { self?.tick() }
         }
         tick()
     }
 
-    private func makeRoundButton(title: String, action: Selector) -> NSButton {
-        let b = NSButton(title: title, target: self, action: action)
-        b.bezelStyle = .circular
-        b.wantsLayer = true
-        return b
+    override func draw(_ dirtyRect: NSRect) {
+        // Grey bar panel with a subtle top-lit gradient.
+        let g = NSGradient(colors: [
+            NSColor(srgbRed: 0.855, green: 0.867, blue: 0.882, alpha: 1),
+            NSColor.wiiBottomBar,
+        ], atLocations: [0, 1], colorSpace: .sRGB)!
+        g.draw(in: bounds, angle: -90)
+        // Small SD-card status glyph to the right of the Wii button.
+        let d = bounds.height * 0.82
+        let sd = d * 0.30
+        let sdRect = NSRect(x: bounds.minX + bounds.width * 0.035 + d + d * 0.14,
+                            y: bounds.midY - sd * 0.65, width: sd, height: sd * 1.3)
+        WiiDraw.sdCard(in: sdRect)
     }
 
     private func tick() {
@@ -63,13 +76,14 @@ final class BottomBarView: NSView {
     override func layout() {
         super.layout()
         let w = bounds.width, h = bounds.height
-        wave.frame = NSRect(x: 0, y: h - 24, width: w, height: 24)
-        clock.frame = NSRect(x: w/2 - 150, y: h/2 - 10, width: 300, height: 56)
-        dateLabel.frame = NSRect(x: w/2 - 150, y: h/2 - 44, width: 300, height: 24)
-        for v in subviews.compactMap({ $0 as? NSButton }) {
-            if v.tag == 1 { v.frame = NSRect(x: 40, y: h/2 - 40, width: 80, height: 80) }
-            if v.tag == 2 { v.frame = NSRect(x: w - 120, y: h/2 - 40, width: 80, height: 80) }
-        }
+        wave.frame = NSRect(x: 0, y: h - 18, width: w, height: 36)
+        clock.frame = NSRect(x: w/2 - 200, y: h * 0.42, width: 400, height: 60)
+        dateLabel.frame = NSRect(x: w/2 - 200, y: h * 0.20, width: 400, height: 26)
+        let d = h * 0.82
+        let inset = w * 0.035
+        wiiButton.frame = NSRect(x: inset, y: (h - d)/2, width: d, height: d)
+        mailButton.frame = NSRect(x: w - inset - d, y: (h - d)/2, width: d, height: d)
+        needsDisplay = true
     }
 
     @objc private func wiiTapped() { onWii() }
