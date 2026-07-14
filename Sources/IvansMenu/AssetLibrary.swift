@@ -64,3 +64,17 @@ final class AssetLibrary {
     /// True if any real Wii art is installed (used to pick asset vs. drawn look).
     var hasArt: Bool { image(.background) != nil || image(.channelFrame) != nil }
 }
+
+extension NSImage {
+    /// Returns a copy recolored to `color`, preserving the original alpha shape.
+    func tinted(with color: NSColor) -> NSImage? {
+        let img = NSImage(size: size)
+        img.lockFocus()
+        color.set()
+        let rect = NSRect(origin: .zero, size: size)
+        draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1)
+        rect.fill(using: .sourceAtop)
+        img.unlockFocus()
+        return img
+    }
+}

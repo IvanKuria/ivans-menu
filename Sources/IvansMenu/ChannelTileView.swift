@@ -5,17 +5,34 @@ import IvansMenuKit
 final class ChannelTileView: NSView {
     var onLaunch: (Channel) -> Void = { _ in }
     private let channel: Channel
-    private let bannerImage: NSImage
+    private let bannerView = NSImageView()
+    private let gloss = CAGradientLayer()
     private var hovered = false
     private var tracking: NSTrackingArea?
 
     init(channel: Channel, image: NSImage) {
         self.channel = channel
-        self.bannerImage = image
         super.init(frame: .zero)
         wantsLayer = true
         layer?.setAffineTransform(CGAffineTransform(scaleX: Theme.hoverScaleFrom,
                                                     y: Theme.hoverScaleFrom))
+        bannerView.imageScaling = .scaleAxesIndependently  // fill edge-to-edge
+        bannerView.animates = true                          // animate GIF thumbnails
+        bannerView.wantsLayer = true
+        bannerView.layer?.masksToBounds = true
+        if !channel.isEmpty {
+            bannerView.image = image
+        } else {
+            bannerView.layer?.backgroundColor =
+                NSColor(srgbRed: 0.91, green: 0.92, blue: 0.93, alpha: 1).cgColor
+        }
+        // Laminated top-gloss sheen over the banner.
+        gloss.colors = [NSColor.white.withAlphaComponent(0.34).cgColor,
+                        NSColor.white.withAlphaComponent(0).cgColor]
+        gloss.startPoint = CGPoint(x: 0.5, y: 1)
+        gloss.endPoint = CGPoint(x: 0.5, y: 0.5)
+        bannerView.layer?.addSublayer(gloss)
+        addSubview(bannerView)
     }
     required init?(coder: NSCoder) { fatalError() }
 
@@ -25,7 +42,6 @@ final class ChannelTileView: NSView {
         let pillow = WiiDraw.pillowPath(in: card, radius: radius)
         let occupied = !channel.isEmpty
 
-        // Drop shadow + (for occupied/hover) cyan halo.
         NSGraphicsContext.saveGraphicsState()
         let shadow = NSShadow()
         if occupied || hovered {
@@ -41,36 +57,27 @@ final class ChannelTileView: NSView {
         NSColor.white.setFill()
         pillow.fill()
         NSGraphicsContext.restoreGraphicsState()
+    }
 
-        // Interior: banner art (occupied) or plain light-grey recess (empty).
-        NSGraphicsContext.saveGraphicsState()
-        let interior = card.insetBy(dx: card.width * 0.018, dy: card.width * 0.018)
-        let clip = WiiDraw.pillowPath(in: interior, radius: radius * 0.9)
-        clip.addClip()
-        if occupied {
-            bannerImage.draw(in: interior, from: .zero, operation: .sourceOver, fraction: 1)
-        } else {
-            NSColor(srgbRed: 0.90, green: 0.91, blue: 0.925, alpha: 1).setFill()
-            interior.fill()
-        }
-        // Top gloss sweep — a laminated "under glass" sheen.
-        let glossRect = NSRect(x: interior.minX, y: interior.midY,
-                               width: interior.width, height: interior.height/2)
-        let gloss = NSGradient(colors: [NSColor.white.withAlphaComponent(0.35),
-                                        NSColor.white.withAlphaComponent(0.0)],
-                               atLocations: [0, 1], colorSpace: .sRGB)!
-        gloss.draw(in: glossRect, angle: -90)
-        NSGraphicsContext.restoreGraphicsState()
-
-        // Border: cyan for occupied/hover, soft grey for empty.
+    override func layout() {
+        super.layout()
+        let card = bounds.insetBy(dx: bounds.width * 0.045, dy: bounds.height * 0.06)
+        let interior = card.insetBy(dx: card.width * 0.02, dy: card.width * 0.02)
+        let radius = interior.width * Theme.tileCornerFraction
+        bannerView.frame = interior
+        bannerView.layer?.cornerRadius = radius
+        let occupied = !channel.isEmpty
         if occupied || hovered {
-            WiiPalette.accent.withAlphaComponent(hovered ? 1 : 0.75).setStroke()
-            pillow.lineWidth = max(2, card.width * 0.012)
+            bannerView.layer?.borderWidth = max(2, card.width * 0.012)
+            bannerView.layer?.borderColor = WiiPalette.accent
+                .withAlphaComponent(hovered ? 1 : 0.75).cgColor
         } else {
-            WiiPalette.cardBorder.setStroke()
-            pillow.lineWidth = max(1, card.width * 0.006)
+            bannerView.layer?.borderWidth = max(1, card.width * 0.006)
+            bannerView.layer?.borderColor = WiiPalette.cardBorder.cgColor
         }
-        pillow.stroke()
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        gloss.frame = CGRect(x: 0, y: interior.height / 2, width: interior.width, height: interior.height / 2)
+        CATransaction.commit()
     }
 
     override func updateTrackingAreas() {
@@ -89,6 +96,7 @@ final class ChannelTileView: NSView {
         hovered = on
         if on { AudioEngine.shared.play(.hover) }
         needsDisplay = true
+        needsLayout = true
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = 0.28
             let scale: CGFloat = on ? 1.0 : Theme.hoverScaleFrom

@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 import IvansMenuKit
 
 struct SettingsView: View {
@@ -86,7 +87,14 @@ struct ChannelRow: View {
                 channel.action = .url(urlText)
             })
             .wiiField()
-            .frame(width: 200)
+            .frame(width: 160)
+            Button(thumbnailLabel) { pickThumbnail() }
+                .buttonStyle(.wii)
+            if case .custom = channel.banner {
+                Button("✕") { channel.banner = .generated }
+                    .buttonStyle(.wii)
+                    .help("Remove custom thumbnail")
+            }
             TextField("Title", text: Binding(
                 get: { channel.title ?? "" },
                 set: { channel.title = $0.isEmpty ? nil : $0 }))
@@ -94,6 +102,11 @@ struct ChannelRow: View {
         }
         .padding(10)
         .wiiCard()
+    }
+
+    private var thumbnailLabel: String {
+        if case .custom = channel.banner { return "Thumbnail ✓" }
+        return "Thumbnail…"
     }
 
     private func pickApp() {
@@ -105,6 +118,17 @@ struct ChannelRow: View {
             if channel.title == nil {
                 channel.title = url.deletingPathExtension().lastPathComponent
             }
+        }
+    }
+
+    /// Pick a custom channel thumbnail — any image, including animated GIFs.
+    private func pickThumbnail() {
+        let panel = NSOpenPanel()
+        panel.message = "Choose a channel thumbnail (PNG, JPEG, or animated GIF)"
+        panel.allowedContentTypes = [.image, .gif, .png, .jpeg]
+        panel.allowsMultipleSelection = false
+        if panel.runModal() == .OK, let url = panel.url {
+            channel.banner = .custom(path: url.path)
         }
     }
 }

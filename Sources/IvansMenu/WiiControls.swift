@@ -200,6 +200,64 @@ enum WiiDraw {
         return p
     }
 
+    /// Draw a 7-segment LCD clock "HH:MM" (colon blinks) centered in `rect`.
+    static func sevenSegment(hour: Int, minute: Int, blinkOn: Bool,
+                             twentyFourHour: Bool, in rect: NSRect, color: NSColor) {
+        var h = hour
+        if !twentyFourHour { h = hour % 12; if h == 0 { h = 12 } }
+        let digits = [h / 10, h % 10, minute / 10, minute % 10]
+
+        let ch = rect.height
+        let cw = ch * 0.55            // digit cell width
+        let colonW = cw * 0.42
+        let gap = cw * 0.20
+        let total = cw * 4 + gap * 4 + colonW
+        var x = rect.midX - total / 2
+        let y = rect.minY
+        color.setFill()
+
+        drawDigit(digits[0], x: x, y: y, w: cw, h: ch); x += cw + gap
+        drawDigit(digits[1], x: x, y: y, w: cw, h: ch); x += cw + gap
+        if blinkOn { drawColon(x: x, y: y, w: colonW, h: ch, color: color) }
+        x += colonW + gap
+        drawDigit(digits[2], x: x, y: y, w: cw, h: ch); x += cw + gap
+        drawDigit(digits[3], x: x, y: y, w: cw, h: ch)
+    }
+
+    private static let segMap: [[Int]] = [
+        [0,1,2,3,4,5], [1,2], [0,1,6,4,3], [0,1,6,2,3], [5,6,1,2],
+        [0,5,6,2,3], [0,5,6,4,2,3], [0,1,2], [0,1,2,3,4,5,6], [0,1,2,3,5,6],
+    ] // segments: 0=a top,1=b TR,2=c BR,3=d bottom,4=e BL,5=f TL,6=g mid
+
+    private static func drawDigit(_ n: Int, x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat) {
+        guard (0...9).contains(n) else { return }
+        let t = h * 0.13
+        let on = Set(segMap[n])
+        func hseg(_ cy: CGFloat) {
+            let r = NSRect(x: x + t * 0.6, y: cy - t/2, width: w - t * 1.2, height: t)
+            NSBezierPath(roundedRect: r, xRadius: t*0.4, yRadius: t*0.4).fill()
+        }
+        func vseg(_ cx: CGFloat, _ y0: CGFloat) {
+            let segH = (h - 3*t) / 2
+            let r = NSRect(x: cx - t/2, y: y0, width: t, height: segH)
+            NSBezierPath(roundedRect: r, xRadius: t*0.4, yRadius: t*0.4).fill()
+        }
+        if on.contains(0) { hseg(y + h - t/2) }            // a
+        if on.contains(6) { hseg(y + h/2) }                // g
+        if on.contains(3) { hseg(y + t/2) }                // d
+        if on.contains(5) { vseg(x + t/2, y + h/2 + t/2) } // f
+        if on.contains(1) { vseg(x + w - t/2, y + h/2 + t/2) } // b
+        if on.contains(4) { vseg(x + t/2, y + t) }         // e
+        if on.contains(2) { vseg(x + w - t/2, y + t) }     // c
+    }
+
+    private static func drawColon(x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat, color: NSColor) {
+        let d = h * 0.14
+        color.setFill()
+        NSBezierPath(ovalIn: NSRect(x: x + w/2 - d/2, y: y + h*0.32, width: d, height: d)).fill()
+        NSBezierPath(ovalIn: NSRect(x: x + w/2 - d/2, y: y + h*0.62, width: d, height: d)).fill()
+    }
+
     static func roundedFont(ofSize size: CGFloat, weight: NSFont.Weight) -> NSFont {
         if let d = NSFont.systemFont(ofSize: size, weight: weight).fontDescriptor
             .withDesign(.rounded) {

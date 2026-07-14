@@ -81,7 +81,7 @@ final class WiiMenuView: NSView {
     override func layout() {
         super.layout()
         bgImageView.frame = bounds
-        let barH = bounds.height * 0.17
+        let barH = bounds.height * 0.19
         bottomBar.frame = NSRect(x: 0, y: 0, width: bounds.width, height: barH)
         let gridArea = NSRect(x: 0, y: barH, width: bounds.width, height: bounds.height - barH)
         gridContainer.frame = gridArea
