@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let store = ConfigStore()
     private(set) var config: AppConfig = .makeDefault()
     let windowController = WallpaperWindowController()
+    var statusItem: StatusItemController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         config = store.load()
@@ -19,9 +20,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         if config.settings.hideDesktopIcons { DesktopIcons.setHidden(true) }
+
+        statusItem = StatusItemController(
+            onSettings: { [weak self] in self?.showSettings() },
+            onQuit: { NSApp.terminate(nil) })
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         if config.settings.hideDesktopIcons { DesktopIcons.setHidden(false) }
     }
+
+    func showSettings() {}
 }
