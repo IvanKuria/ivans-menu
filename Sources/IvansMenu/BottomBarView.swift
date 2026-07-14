@@ -64,9 +64,9 @@ final class BottomBarView: NSView {
 
     private func drawClock() {
         let w = bounds.width, h = bounds.height
-        // The bevel's central valley is at 0.434*h from the bottom (measured from
-        // the asset); keep the whole clock below it, in the grey dip.
-        let clockRect = NSRect(x: w/2 - 150, y: h * 0.12, width: 300, height: h * 0.25)
+        // The bevel's central valley is at 0.434*h from the bottom; the clock sits
+        // ABOVE that line, in the white pocket the dip creates.
+        let clockRect = NSRect(x: w/2 - 150, y: h * 0.46, width: 300, height: h * 0.26)
         WiiDraw.sevenSegment(hour: curHour, minute: curMinute, blinkOn: blinkOn,
                              twentyFourHour: false, in: clockRect, color: .wiiClock)
     }
@@ -85,7 +85,7 @@ final class BottomBarView: NSView {
     override func layout() {
         super.layout()
         let w = bounds.width, h = bounds.height
-        dateLabel.frame = NSRect(x: w/2 - 200, y: h * 0.005, width: 400, height: 22)
+        dateLabel.frame = NSRect(x: w/2 - 200, y: h * 0.30, width: 400, height: 22)
         // Click regions over the baked-in Wii (left) and mail (right) buttons.
         let bw = w * 0.14, bh = h * 0.62
         wiiRegion.frame = NSRect(x: w * 0.095 - bw/2, y: h * 0.306 - bh/2, width: bw, height: bh)
