@@ -6,7 +6,6 @@ import IvansMenuKit
 final class ClickRegion: NSView {
     var onClick: () -> Void = {}
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-    override func cursorUpdate(with event: NSEvent) { WiiCursor.shared?.set() }
     override func mouseUp(with event: NSEvent) {
         if bounds.contains(convert(event.locationInWindow, from: nil)) { onClick() }
     }

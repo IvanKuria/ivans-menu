@@ -32,8 +32,10 @@ final class WiiMenuView: NSView {
         setupArrows()
         bottomBar.onWii = { [weak self] in self?.onWii() }
         rebuildGrid()
+        setupCursorOverlay()
     }
     required init?(coder: NSCoder) { fatalError() }
+    deinit { cursorTimer?.invalidate() }
 
     private func applyBackgroundGradient() {
         let g = CAGradientLayer()
@@ -52,18 +54,40 @@ final class WiiMenuView: NSView {
         addSubview(leftArrow); addSubview(rightArrow)
     }
 
-    private var cursorTracking: NSTrackingArea?
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        if let cursorTracking { removeTrackingArea(cursorTracking) }
-        let t = NSTrackingArea(rect: bounds, options: [.cursorUpdate, .mouseMoved, .activeAlways],
-                               owner: self, userInfo: nil)
-        addTrackingArea(t); cursorTracking = t
+    // Custom Wii hand cursor drawn as an overlay that follows the mouse, because a
+    // non-key wallpaper window can't reliably override the system cursor via NSCursor.
+    private let cursorView = PassthroughImageView()
+    private nonisolated(unsafe) var cursorTimer: Timer?
+
+    private func setupCursorOverlay() {
+        guard let cimg = AssetLibrary.shared.image(.cursor) else { return }
+        cursorView.image = cimg
+        cursorView.imageScaling = .scaleProportionallyUpOrDown
+        cursorView.frame = NSRect(x: 0, y: 0, width: 46, height: 46)
+        cursorView.isHidden = true
+        addSubview(cursorView, positioned: .above, relativeTo: nil)
+        cursorTimer = Timer.scheduledTimer(withTimeInterval: 1.0/60, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.updateCursorOverlay() }
+        }
     }
-    override func cursorUpdate(with event: NSEvent) {
-        if let c = WiiCursor.shared { c.set() } else { super.cursorUpdate(with: event) }
+
+    private var systemCursorHidden = false
+    private func updateCursorOverlay() {
+        guard let window = window else { return }
+        let viewPt = convert(window.convertPoint(fromScreen: NSEvent.mouseLocation), from: nil)
+        let inside = bounds.contains(viewPt)
+        if inside {
+            addSubview(cursorView, positioned: .above, relativeTo: nil) // keep on top
+            cursorView.isHidden = false
+            let w = cursorView.frame.width, h = cursorView.frame.height
+            // hotspot = fingertip: ~0.34 from left, ~0.92 up from the bottom of the image
+            cursorView.setFrameOrigin(NSPoint(x: viewPt.x - w * 0.34, y: viewPt.y - h * 0.92))
+            if !systemCursorHidden { NSCursor.hide(); systemCursorHidden = true }
+        } else if systemCursorHidden || !cursorView.isHidden {
+            cursorView.isHidden = true
+            if systemCursorHidden { NSCursor.unhide(); systemCursorHidden = false }
+        }
     }
-    override func mouseMoved(with event: NSEvent) { WiiCursor.shared?.set() }
 
     @objc private func prevPage() { if currentPage > 0 { currentPage -= 1; rebuildGrid() } }
     @objc private func nextPage() {
@@ -123,4 +147,11 @@ final class WiiMenuView: NSView {
         rightArrow.frame = NSRect(x: bounds.width - bounds.width * 0.012 - aW,
                                   y: aY, width: aW, height: aH)
     }
+}
+
+/// An image view that never intercepts mouse events (used for the cursor overlay
+/// so it can sit on top of everything without blocking clicks).
+@MainActor
+final class PassthroughImageView: NSImageView {
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }

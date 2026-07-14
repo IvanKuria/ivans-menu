@@ -81,16 +81,12 @@ final class ChannelTileView: NSView {
         super.updateTrackingAreas()
         if let tracking { removeTrackingArea(tracking) }
         let t = NSTrackingArea(rect: bounds,
-                               options: [.mouseEnteredAndExited, .cursorUpdate, .activeAlways],
+                               options: [.mouseEnteredAndExited, .activeAlways],
                                owner: self, userInfo: nil)
         addTrackingArea(t); tracking = t
     }
 
-    override func cursorUpdate(with event: NSEvent) {
-        if let c = WiiCursor.shared { c.set() } else { super.cursorUpdate(with: event) }
-    }
-
-    override func mouseEntered(with event: NSEvent) { setHover(true); WiiCursor.shared?.set() }
+    override func mouseEntered(with event: NSEvent) { setHover(true) }
     override func mouseExited(with event: NSEvent) { setHover(false) }
 
     private func setHover(_ on: Bool) {
