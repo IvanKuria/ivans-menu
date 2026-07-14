@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var peeking = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        FontLoader.registerBundledFonts()
         config = store.load()
         NSApp.setActivationPolicy(.accessory) // agent app, no Dock icon
 
@@ -41,9 +42,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func buildMenuContent(_ screen: NSScreen) -> NSView {
+        let (packIDs, packImage) = loadPack()
         let renderer = BannerRenderer(
-            packIDs: [],
-            packImage: { _ in nil },
+            packIDs: packIDs,
+            packImage: packImage,
             appIcon: { action in
                 if case .app(let path) = action {
                     return NSWorkspace.shared.icon(forFile: path)
@@ -54,6 +56,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         menu.onWii = { [weak self] in self?.showSettings() }
         menu.onLaunch = { [weak self] channel in self?.launch(channel) }
         return menu
+    }
+
+    struct PackEntry: Decodable { let id: String; let file: String }
+    func loadPack() -> (Set<String>, (String) -> NSImage?) {
+        guard let url = Bundle.module.url(forResource: "manifest", withExtension: "json",
+                                          subdirectory: "Resources/Banners"),
+              let data = try? Data(contentsOf: url),
+              let entries = try? JSONDecoder().decode([PackEntry].self, from: data)
+        else { return ([], { _ in nil }) }
+        let map = Dictionary(uniqueKeysWithValues: entries.map { ($0.id, $0.file) })
+        let image: (String) -> NSImage? = { id in
+            guard let file = map[id],
+                  let u = Bundle.module.url(forResource: file, withExtension: nil,
+                                            subdirectory: "Resources/Banners")
+            else { return nil }
+            return NSImage(contentsOf: u)
+        }
+        return (Set(map.keys), image)
     }
 
     private func rebuildMenu() {
