@@ -4,15 +4,36 @@ import IvansMenuKit
 /// Ways a channel can be reconfigured from its right-click menu.
 enum ChannelEdit { case app, url, thumbnail, title, clear }
 
+/// Draws a clean, uniform pillow-shaped border on top of the banner (pass-through
+/// so it never blocks clicks).
+@MainActor
+final class PillowBorderView: NSView {
+    var strokeColor: NSColor = .gray
+    var lineWidth: CGFloat = 2
+    var radiusFraction: CGFloat = 0.045
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    override func draw(_ dirtyRect: NSRect) {
+        let r = bounds.insetBy(dx: lineWidth / 2, dy: lineWidth / 2)
+        let path = WiiDraw.pillowPath(in: r, radius: r.width * radiusFraction)
+        strokeColor.setStroke()
+        path.lineWidth = lineWidth
+        path.stroke()
+    }
+}
+
 @MainActor
 final class ChannelTileView: NSView {
     var onLaunch: (Channel) -> Void = { _ in }
     var onEdit: (Int, ChannelEdit) -> Void = { _, _ in }
     private let channel: Channel
-    private let bannerView = NSImageView()   // channel art (occupied) or empty card
+    private let bannerView = NSImageView()      // channel art (occupied) or empty card
+    private let maskLayer = CAShapeLayer()       // clip banner to the pillow shape
+    private let borderView = PillowBorderView()  // clean pillow border on top
     private let populated: Bool
     private var hovered = false
     private var tracking: NSTrackingArea?
+
+    private static let cornerFraction: CGFloat = 0.05
 
     init(channel: Channel, image: NSImage) {
         self.channel = channel
@@ -22,42 +43,30 @@ final class ChannelTileView: NSView {
         wantsLayer = true
         layer?.setAffineTransform(CGAffineTransform(scaleX: Theme.hoverScaleFrom,
                                                     y: Theme.hoverScaleFrom))
-        // Fill the frame interior edge-to-edge (custom thumbs may be any aspect); the
-        // rounded-corner clip below hides any overflow past the frame opening.
-        bannerView.imageScaling = .scaleAxesIndependently
-        bannerView.animates = true
+        bannerView.imageScaling = .scaleAxesIndependently   // fill edge-to-edge
+        bannerView.animates = true                           // animate GIF thumbnails
         bannerView.wantsLayer = true
-        bannerView.layer?.masksToBounds = true
+        bannerView.layer?.mask = maskLayer                   // clip to the pillow shape
 
-        // "populated" (set in init) is true when the channel launches something OR
-        // has a custom thumbnail — so a thumbnail can be set on its own and still show.
         if populated {
             bannerView.image = image
-            // Clean, uniform gray border drawn on the banner's own rounded layer
-            // (the ripped frame outline was hand-drawn and wobbly).
-            bannerView.layer?.borderColor = NSColor(srgbRed: 0.78, green: 0.79, blue: 0.81, alpha: 1).cgColor
+            borderView.strokeColor = NSColor(srgbRed: 0.78, green: 0.79, blue: 0.81, alpha: 1)
         } else {
-            // Real Wii empty-slot card (light pillow + faint "Wii" watermark).
             bannerView.image = AssetLibrary.shared.image(.emptyCard)
                 ?? AssetLibrary.shared.image(.emptyFrame)
+            borderView.strokeColor = NSColor(srgbRed: 0.84, green: 0.85, blue: 0.87, alpha: 1)
         }
         addSubview(bannerView)
+        addSubview(borderView)
     }
     required init?(coder: NSCoder) { fatalError() }
 
     private func cardRect() -> NSRect { bounds.insetBy(dx: bounds.width * 0.05, dy: bounds.height * 0.06) }
 
-    /// Corner radius of the frame_gray.png rounded opening, as a fraction of the card
-    /// width. Measured from the asset (≈14px / 340px). The banner's clip and the shadow
-    /// pillow both use this so the banner, the gray border, and the shadow share one
-    /// rounded-rect shape — no double border, no corners poking past the frame.
-    private static let frameCornerFraction: CGFloat = 0.045
-
     override func draw(_ dirtyRect: NSRect) {
-        // Soft drop shadow under the tile (the cyan glow itself is baked into the frame PNG).
+        // Soft drop shadow behind the pillow-shaped tile.
         let card = cardRect()
-        let radius = card.width * Self.frameCornerFraction
-        let path = NSBezierPath(roundedRect: card, xRadius: radius, yRadius: radius)
+        let pillow = WiiDraw.pillowPath(in: card, radius: card.width * Self.cornerFraction)
         NSGraphicsContext.saveGraphicsState()
         let shadow = NSShadow()
         shadow.shadowColor = NSColor.black.withAlphaComponent(hovered ? 0.22 : 0.14)
@@ -65,7 +74,7 @@ final class ChannelTileView: NSView {
         shadow.shadowOffset = NSSize(width: 0, height: -card.height * 0.02)
         shadow.set()
         NSColor.white.setFill()
-        path.fill()
+        pillow.fill()
         NSGraphicsContext.restoreGraphicsState()
     }
 
@@ -73,9 +82,15 @@ final class ChannelTileView: NSView {
         super.layout()
         let card = cardRect()
         bannerView.frame = card
-        bannerView.layer?.cornerRadius = card.width * Self.frameCornerFraction
-        // Uniform gray border for populated tiles; empty cards carry their own edge.
-        bannerView.layer?.borderWidth = populated ? max(1, card.width * 0.014) : 0
+        let localPillow = WiiDraw.pillowPath(in: NSRect(origin: .zero, size: card.size),
+                                             radius: card.width * Self.cornerFraction)
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        maskLayer.path = localPillow.cgPath
+        CATransaction.commit()
+        borderView.frame = card
+        borderView.lineWidth = max(1, card.width * 0.014)
+        borderView.radiusFraction = Self.cornerFraction
+        borderView.needsDisplay = true
     }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
