@@ -29,6 +29,10 @@ final class WallpaperWindowController {
         windows.forEach { $0.ignoresMouseEvents = !interactive }
     }
 
+    func setPeek(_ peek: Bool) {
+        windows.forEach { peek ? $0.orderOut(nil) : $0.orderFront(nil) }
+    }
+
     @objc private func screensChanged() {
         if let content = contentProvider { rebuild(content: content) }
     }

@@ -11,6 +11,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var statusItem: StatusItemController?
     var settingsWindow: NSWindow?
     lazy var settingsVM = ChannelStoreVM(store: store)
+    var hotKey: GlobalHotKey?
+    var peeking = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         config = store.load()
@@ -38,6 +40,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         statusItem = StatusItemController(
             onSettings: { [weak self] in self?.showSettings() },
             onQuit: { NSApp.terminate(nil) })
+
+        if config.settings.peekHotKeyEnabled {
+            hotKey = GlobalHotKey { [weak self] in self?.togglePeek() }
+        }
+    }
+
+    func togglePeek() {
+        peeking.toggle()
+        windowController.setPeek(peeking)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
