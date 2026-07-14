@@ -26,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         statusItem = StatusItemController(
             onSettings: { [weak self] in self?.showSettings() },
+            onRestoreIcons: { DesktopIcons.setHidden(false) },
             onQuit: { NSApp.terminate(nil) })
 
         if config.settings.peekHotKeyEnabled {
@@ -88,11 +89,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         rebuildMenu()
     }
 
+    func applySettings() {
+        AudioEngine.shared.soundEnabled = config.settings.soundEnabled
+        AudioEngine.shared.musicEnabled = config.settings.musicEnabled
+        if AudioEngine.shared.musicEnabled {
+            AudioEngine.shared.startMusic()
+        } else {
+            AudioEngine.shared.stopMusic()
+        }
+        DesktopIcons.setHidden(config.settings.hideDesktopIcons)
+    }
+
     private func showOnboarding() {
         let host = NSHostingController(rootView:
             OnboardingView(vm: settingsVM) { [weak self] in
                 self?.onboardingWindow?.close()
                 self?.reloadMenu()
+                self?.applySettings()
             })
         let win = NSWindow(contentViewController: host)
         win.title = "Welcome to Ivan's Menu"
@@ -129,8 +142,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
+        if window === settingsWindow {
+            settingsVM.save()
+            reloadMenu()
+            applySettings()
+        }
         if window === settingsWindow || window === onboardingWindow {
-            NSApp.setActivationPolicy(.accessory)
+            let otherStillVisible: Bool
+            if window === settingsWindow {
+                otherStillVisible = onboardingWindow?.isVisible ?? false
+            } else {
+                otherStillVisible = settingsWindow?.isVisible ?? false
+            }
+            if !otherStillVisible {
+                NSApp.setActivationPolicy(.accessory)
+            }
         }
         if window === onboardingWindow {
             onboardingWindow = nil

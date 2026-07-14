@@ -23,6 +23,11 @@ open IvansMenu.app
 - **⌥Space** peeks the real desktop.
 - Quit from the 🎮 menu-bar item (restores your desktop icons).
 
+## Troubleshooting
+If the app quits unexpectedly and your desktop icons are missing, either:
+- Click the 🎮 menu-bar item → **Restore Desktop Icons**, or
+- Run in Terminal: `defaults write com.apple.finder CreateDesktop true; killall Finder`
+
 ## Credits
 - Fonts: Asap, M PLUS Rounded 1c (SIL Open Font License).
 - Inspired by the 2006 Wii Menu; all assets re-created originally.
