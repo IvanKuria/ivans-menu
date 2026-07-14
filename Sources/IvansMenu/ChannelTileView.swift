@@ -9,9 +9,8 @@ final class ChannelTileView: NSView {
     var onLaunch: (Channel) -> Void = { _ in }
     var onEdit: (Int, ChannelEdit) -> Void = { _, _ in }
     private let channel: Channel
-    private let bannerView = NSImageView()
-    private let maskLayer = CAShapeLayer()
-    private let gloss = CAGradientLayer()
+    private let bannerView = NSImageView()   // channel art (occupied) or empty card
+    private let frameView = NSImageView()     // real cyan Wii frame overlay (occupied)
     private var hovered = false
     private var tracking: NSTrackingArea?
 
@@ -24,74 +23,52 @@ final class ChannelTileView: NSView {
         bannerView.imageScaling = .scaleAxesIndependently
         bannerView.animates = true
         bannerView.wantsLayer = true
-        bannerView.layer?.mask = maskLayer          // clip to the pillowed Wii shape
+        frameView.imageScaling = .scaleAxesIndependently
+
         if !channel.isEmpty {
+            bannerView.layer?.masksToBounds = true
             bannerView.image = image
+            frameView.image = AssetLibrary.shared.image(.frameCyan)
+                ?? AssetLibrary.shared.image(.frameGray)
         } else {
-            // Empty slot: light card + a faint "Wii" watermark (the real texture,
-            // drawn very lightly so it reads as a subtle watermark, not harsh noise).
-            bannerView.layer?.backgroundColor =
-                NSColor(srgbRed: 0.925, green: 0.933, blue: 0.941, alpha: 1).cgColor
-            if let empty = AssetLibrary.shared.image(.emptyFrame) {
-                bannerView.image = empty
-                bannerView.alphaValue = 0.14
-            }
+            // Real Wii empty-slot card (light pillow + faint "Wii" watermark).
+            bannerView.image = AssetLibrary.shared.image(.emptyCard)
+                ?? AssetLibrary.shared.image(.emptyFrame)
         }
-        gloss.colors = [NSColor.white.withAlphaComponent(0.28).cgColor,
-                        NSColor.white.withAlphaComponent(0).cgColor]
-        gloss.startPoint = CGPoint(x: 0.5, y: 1)
-        gloss.endPoint = CGPoint(x: 0.5, y: 0.5)
-        bannerView.layer?.addSublayer(gloss)
         addSubview(bannerView)
+        addSubview(frameView)
     }
     required init?(coder: NSCoder) { fatalError() }
 
-    private func cardRect() -> NSRect { bounds.insetBy(dx: bounds.width * 0.045, dy: bounds.height * 0.06) }
+    private func cardRect() -> NSRect { bounds.insetBy(dx: bounds.width * 0.05, dy: bounds.height * 0.06) }
 
     override func draw(_ dirtyRect: NSRect) {
+        // Soft drop shadow under the tile (the cyan glow itself is baked into the frame PNG).
         let card = cardRect()
         let radius = card.width * Theme.tileCornerFraction
-        let pillow = WiiDraw.pillowPath(in: card, radius: radius)
-        let occupied = !channel.isEmpty
-
+        let path = NSBezierPath(roundedRect: card, xRadius: radius, yRadius: radius)
         NSGraphicsContext.saveGraphicsState()
         let shadow = NSShadow()
-        if occupied || hovered {
-            shadow.shadowColor = WiiPalette.accent.withAlphaComponent(hovered ? 0.95 : 0.5)
-            shadow.shadowBlurRadius = hovered ? card.width * 0.05 : card.width * 0.03
-            shadow.shadowOffset = .zero
-        } else {
-            shadow.shadowColor = NSColor.black.withAlphaComponent(0.16)
-            shadow.shadowBlurRadius = card.width * 0.02
-            shadow.shadowOffset = NSSize(width: 0, height: -card.height * 0.02)
-        }
+        shadow.shadowColor = NSColor.black.withAlphaComponent(hovered ? 0.22 : 0.14)
+        shadow.shadowBlurRadius = card.width * (hovered ? 0.03 : 0.02)
+        shadow.shadowOffset = NSSize(width: 0, height: -card.height * 0.02)
         shadow.set()
         NSColor.white.setFill()
-        pillow.fill()
+        path.fill()
         NSGraphicsContext.restoreGraphicsState()
-
-        // Pillow-shaped border ring (the banner sits inset within it).
-        if occupied || hovered {
-            WiiPalette.accent.withAlphaComponent(hovered ? 1 : 0.75).setStroke()
-            pillow.lineWidth = max(2, card.width * 0.012)
-        } else {
-            WiiPalette.cardBorder.setStroke()
-            pillow.lineWidth = max(1, card.width * 0.006)
-        }
-        pillow.stroke()
     }
 
     override func layout() {
         super.layout()
         let card = cardRect()
-        let interior = card.insetBy(dx: card.width * 0.03, dy: card.width * 0.03)
-        bannerView.frame = interior
-        let radius = interior.width * Theme.tileCornerFraction
-        let path = WiiDraw.pillowPath(in: NSRect(origin: .zero, size: interior.size), radius: radius)
-        CATransaction.begin(); CATransaction.setDisableActions(true)
-        maskLayer.path = path.cgPath
-        gloss.frame = CGRect(x: 0, y: interior.height / 2, width: interior.width, height: interior.height / 2)
-        CATransaction.commit()
+        frameView.frame = card
+        if !channel.isEmpty {
+            let inset = card.insetBy(dx: card.width * 0.045, dy: card.height * 0.05)
+            bannerView.frame = inset
+            bannerView.layer?.cornerRadius = inset.width * Theme.tileCornerFraction
+        } else {
+            bannerView.frame = card
+        }
     }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }

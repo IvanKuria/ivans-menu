@@ -13,6 +13,9 @@ enum WiiAsset: String, CaseIterable {
     case bottombar
     case wave
     case channelFrame = "channel_frame"
+    case frameCyan = "frame_cyan"
+    case frameGray = "frame_gray"
+    case emptyCard = "empty_card"
     case emptyFrame = "empty_frame"
     case wiiButton = "wii_button"
     case mailButton = "mail_button"
