@@ -234,14 +234,16 @@ enum WiiDraw {
         let cw = ch * 0.55
         let colonW = cw * 0.42
         let gap = cw * 0.20
-        let ampmW = twentyFourHour ? 0 : cw * 1.05
-        let total = cw * 4 + gap * 4 + colonW + ampmW
+        // Center on the HH:MM digits (AM/PM hangs off to the right, like the real clock);
+        // exclude the blank leading digit so single-digit hours still center.
+        let digitCount: CGFloat = blankTens ? 3 : 4
+        let gapCount: CGFloat = blankTens ? 2 : 3
+        let total = cw * digitCount + gap * gapCount + colonW
         var x = rect.midX - total / 2
         let y = rect.minY
         color.setFill()
 
-        if !blankTens { drawDigit(hTens, x: x, y: y, w: cw, h: ch) }
-        x += cw + gap
+        if !blankTens { drawDigit(hTens, x: x, y: y, w: cw, h: ch); x += cw + gap }
         drawDigit(hOnes, x: x, y: y, w: cw, h: ch); x += cw + gap
         if blinkOn { drawColon(x: x, y: y, w: colonW, h: ch, color: color) }
         x += colonW + gap
@@ -250,11 +252,11 @@ enum WiiDraw {
 
         if !twentyFourHour {
             let label = NSAttributedString(string: isPM ? "PM" : "AM", attributes: [
-                .font: roundedFont(ofSize: ch * 0.42, weight: .semibold),
+                .font: roundedFont(ofSize: ch * 0.40, weight: .semibold),
                 .foregroundColor: color,
             ])
-            let ls = label.size()
-            label.draw(at: NSPoint(x: x + gap * 1.5, y: y + (ch - ls.height) / 2))
+            // Sit AM/PM low (baseline-ish), like the real clock.
+            label.draw(at: NSPoint(x: x + gap * 1.2, y: y + ch * 0.06))
         }
     }
 
