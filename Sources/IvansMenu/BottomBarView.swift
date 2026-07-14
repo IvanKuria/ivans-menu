@@ -89,7 +89,8 @@ final class BottomBarView: NSView {
 
     private func drawClock() {
         let w = bounds.width, h = bounds.height
-        let clockRect = NSRect(x: w/2 - 170, y: h * 0.38, width: 340, height: h * 0.34)
+        // Keep the clock well below the bevel's central valley so it never crosses it.
+        let clockRect = NSRect(x: w/2 - 170, y: h * 0.24, width: 340, height: h * 0.26)
         WiiDraw.sevenSegment(hour: curHour, minute: curMinute, blinkOn: blinkOn,
                              twentyFourHour: false, in: clockRect, color: .wiiClock)
     }
@@ -123,7 +124,7 @@ final class BottomBarView: NSView {
     override func layout() {
         super.layout()
         let w = bounds.width, h = bounds.height
-        dateLabel.frame = NSRect(x: w/2 - 200, y: h * 0.14, width: 400, height: 26)
+        dateLabel.frame = NSRect(x: w/2 - 200, y: h * 0.06, width: 400, height: 24)
         let d = h * 0.82
         let inset = w * 0.035
         wiiButton.frame = NSRect(x: inset, y: (h - d)/2, width: d, height: d)

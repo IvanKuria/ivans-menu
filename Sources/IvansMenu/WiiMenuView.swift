@@ -52,6 +52,19 @@ final class WiiMenuView: NSView {
         addSubview(leftArrow); addSubview(rightArrow)
     }
 
+    private var cursorTracking: NSTrackingArea?
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let cursorTracking { removeTrackingArea(cursorTracking) }
+        let t = NSTrackingArea(rect: bounds, options: [.cursorUpdate, .mouseMoved, .activeAlways],
+                               owner: self, userInfo: nil)
+        addTrackingArea(t); cursorTracking = t
+    }
+    override func cursorUpdate(with event: NSEvent) {
+        if let c = WiiCursor.shared { c.set() } else { super.cursorUpdate(with: event) }
+    }
+    override func mouseMoved(with event: NSEvent) { WiiCursor.shared?.set() }
+
     @objc private func prevPage() { if currentPage > 0 { currentPage -= 1; rebuildGrid() } }
     @objc private func nextPage() {
         if currentPage < Theme.pageCount - 1 { currentPage += 1; rebuildGrid() }
@@ -83,7 +96,7 @@ final class WiiMenuView: NSView {
     override func layout() {
         super.layout()
         bgImageView.frame = bounds
-        let barH = bounds.height * 0.19
+        let barH = bounds.height * 0.20
         bottomBar.frame = NSRect(x: 0, y: 0, width: bounds.width, height: barH)
         let gridArea = NSRect(x: 0, y: barH, width: bounds.width, height: bounds.height - barH)
         gridContainer.frame = gridArea

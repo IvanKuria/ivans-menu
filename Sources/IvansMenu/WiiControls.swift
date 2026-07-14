@@ -176,32 +176,46 @@ enum WiiDraw {
                                   width: w*0.6, height: h*0.12)).fill()
     }
 
-    /// A pillowed (barrel-sided) rounded rectangle path, like the Wii channel border.
+    /// A pillowed rounded rectangle like the Wii channel border: all four edges
+    /// bow outward (convex), with rounded corners. `b` controls how "pillowy".
     static func pillowPath(in rect: NSRect, radius: CGFloat) -> NSBezierPath {
         let p = NSBezierPath()
         let r = radius
-        let bulge = min(rect.width, rect.height) * 0.02
+        let b = min(rect.width, rect.height) * 0.05   // edge bulge
+        let w = rect.width, h = rect.height
+        // bottom edge (convex down)
         p.move(to: NSPoint(x: rect.minX + r, y: rect.minY))
-        p.line(to: NSPoint(x: rect.maxX - r, y: rect.minY))
+        p.curve(to: NSPoint(x: rect.maxX - r, y: rect.minY),
+                controlPoint1: NSPoint(x: rect.minX + w * 0.33, y: rect.minY - b),
+                controlPoint2: NSPoint(x: rect.minX + w * 0.67, y: rect.minY - b))
+        // bottom-right corner
         p.curve(to: NSPoint(x: rect.maxX, y: rect.minY + r),
-                controlPoint1: NSPoint(x: rect.maxX - r*0.45, y: rect.minY),
-                controlPoint2: NSPoint(x: rect.maxX, y: rect.minY + r*0.45))
+                controlPoint1: NSPoint(x: rect.maxX - r * 0.45, y: rect.minY),
+                controlPoint2: NSPoint(x: rect.maxX, y: rect.minY + r * 0.45))
+        // right edge (convex right)
         p.curve(to: NSPoint(x: rect.maxX, y: rect.maxY - r),
-                controlPoint1: NSPoint(x: rect.maxX + bulge, y: rect.midY),
-                controlPoint2: NSPoint(x: rect.maxX, y: rect.maxY - r*0.45 - bulge))
+                controlPoint1: NSPoint(x: rect.maxX + b, y: rect.minY + h * 0.33),
+                controlPoint2: NSPoint(x: rect.maxX + b, y: rect.minY + h * 0.67))
+        // top-right corner
         p.curve(to: NSPoint(x: rect.maxX - r, y: rect.maxY),
-                controlPoint1: NSPoint(x: rect.maxX, y: rect.maxY - r*0.45),
-                controlPoint2: NSPoint(x: rect.maxX - r*0.45, y: rect.maxY))
-        p.line(to: NSPoint(x: rect.minX + r, y: rect.maxY))
+                controlPoint1: NSPoint(x: rect.maxX, y: rect.maxY - r * 0.45),
+                controlPoint2: NSPoint(x: rect.maxX - r * 0.45, y: rect.maxY))
+        // top edge (convex up)
+        p.curve(to: NSPoint(x: rect.minX + r, y: rect.maxY),
+                controlPoint1: NSPoint(x: rect.minX + w * 0.67, y: rect.maxY + b),
+                controlPoint2: NSPoint(x: rect.minX + w * 0.33, y: rect.maxY + b))
+        // top-left corner
         p.curve(to: NSPoint(x: rect.minX, y: rect.maxY - r),
-                controlPoint1: NSPoint(x: rect.minX + r*0.45, y: rect.maxY),
-                controlPoint2: NSPoint(x: rect.minX, y: rect.maxY - r*0.45))
+                controlPoint1: NSPoint(x: rect.minX + r * 0.45, y: rect.maxY),
+                controlPoint2: NSPoint(x: rect.minX, y: rect.maxY - r * 0.45))
+        // left edge (convex left)
         p.curve(to: NSPoint(x: rect.minX, y: rect.minY + r),
-                controlPoint1: NSPoint(x: rect.minX - bulge, y: rect.midY),
-                controlPoint2: NSPoint(x: rect.minX, y: rect.minY + r*0.45 + bulge))
+                controlPoint1: NSPoint(x: rect.minX - b, y: rect.minY + h * 0.67),
+                controlPoint2: NSPoint(x: rect.minX - b, y: rect.minY + h * 0.33))
+        // bottom-left corner
         p.curve(to: NSPoint(x: rect.minX + r, y: rect.minY),
-                controlPoint1: NSPoint(x: rect.minX, y: rect.minY + r*0.45),
-                controlPoint2: NSPoint(x: rect.minX + r*0.45, y: rect.minY))
+                controlPoint1: NSPoint(x: rect.minX, y: rect.minY + r * 0.45),
+                controlPoint2: NSPoint(x: rect.minX + r * 0.45, y: rect.minY))
         p.close()
         return p
     }
@@ -285,6 +299,23 @@ enum WiiDraw {
         }
         return .systemFont(ofSize: size, weight: weight)
     }
+}
+
+// MARK: - Cursor
+
+/// The Wii hand pointer, built from the real cursor rip. Hotspot at the fingertip.
+@MainActor
+enum WiiCursor {
+    static let shared: NSCursor? = {
+        guard let img = AssetLibrary.shared.image(.cursor) else { return nil }
+        let size = NSSize(width: 44, height: 44)
+        let resized = NSImage(size: size)
+        resized.lockFocus()
+        NSGraphicsContext.current?.imageInterpolation = .high
+        img.draw(in: NSRect(origin: .zero, size: size))
+        resized.unlockFocus()
+        return NSCursor(image: resized, hotSpot: NSPoint(x: 16, y: 3))
+    }()
 }
 
 // MARK: - Controls
