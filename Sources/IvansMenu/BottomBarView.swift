@@ -48,45 +48,42 @@ final class BottomBarView: NSView {
         drawClock()
     }
 
-    /// The grey bottom panel with a smooth "bent bevel" top edge — high at both
-    /// corners (around the round buttons), dipping into a broad central valley —
-    /// and a clean glowing cyan line tracing that edge. Neutral grey, no blue wash.
+    /// The bottom panel. Uses the real Wii bar texture (the left half of the
+    /// symmetric bent-bevel curve, mirrored for the right) drawn in its natural
+    /// shading, with a cyan edge line produced by a cyan copy peeking behind it.
+    /// Falls back to a drawn curve only if the texture is missing.
     private func drawBar() {
+        guard let bar = AssetLibrary.shared.image(.bottombar) else { drawBarFallback(); return }
+        let cyan = bar.tinted(with: NSColor(srgbRed: 0.30, green: 0.74, blue: 0.93, alpha: 1))
+        let lineOffset = max(2, bounds.height * 0.02)
+        if let cyan { drawBarHalves(cyan, dy: lineOffset) }   // cyan edge peeks above…
+        drawBarHalves(bar, dy: 0)                             // …the natural bar on top
+    }
+
+    private func drawBarHalves(_ image: NSImage, dy: CGFloat) {
+        let halfW = bounds.width / 2
+        image.draw(in: NSRect(x: 0, y: dy, width: halfW, height: bounds.height),
+                   from: .zero, operation: .sourceOver, fraction: 1)
+        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
+        ctx.saveGState()
+        ctx.translateBy(x: bounds.width, y: 0)
+        ctx.scaleBy(x: -1, y: 1)
+        image.draw(in: NSRect(x: 0, y: dy, width: halfW, height: bounds.height),
+                   from: .zero, operation: .sourceOver, fraction: 1)
+        ctx.restoreGState()
+    }
+
+    private func drawBarFallback() {
         let W = bounds.width, H = bounds.height
         let base = H * 0.56, amp = H * 0.26
         func edge(_ x: CGFloat) -> CGFloat { base + amp * cos(2 * .pi * x / W) }
-
         let fill = NSBezierPath()
-        fill.move(to: NSPoint(x: 0, y: 0))
-        fill.line(to: NSPoint(x: 0, y: edge(0)))
+        fill.move(to: NSPoint(x: 0, y: 0)); fill.line(to: NSPoint(x: 0, y: edge(0)))
         var x: CGFloat = 0
         while x <= W { fill.line(to: NSPoint(x: x, y: edge(x))); x += 2 }
         fill.line(to: NSPoint(x: W, y: 0)); fill.close()
-
-        NSGraphicsContext.saveGraphicsState()
-        fill.setClip()
-        let g = NSGradient(colors: [
-            NSColor(srgbRed: 0.933, green: 0.941, blue: 0.949, alpha: 1),   // lighter bottom
-            NSColor(srgbRed: 0.859, green: 0.871, blue: 0.886, alpha: 1),   // darker near curve
-        ], atLocations: [0, 1], colorSpace: .sRGB)!
-        g.draw(in: bounds, angle: 90)
-        NSGraphicsContext.restoreGraphicsState()
-
-        // Glowing cyan edge line.
-        let line = NSBezierPath()
-        line.move(to: NSPoint(x: 0, y: edge(0)))
-        x = 0
-        while x <= W { line.line(to: NSPoint(x: x, y: edge(x))); x += 2 }
-        line.lineWidth = max(2, H * 0.018)
-        line.lineCapStyle = .round
-        NSGraphicsContext.saveGraphicsState()
-        let glow = NSShadow()
-        glow.shadowColor = NSColor.wiiAccent.withAlphaComponent(0.75)
-        glow.shadowBlurRadius = H * 0.05
-        glow.shadowOffset = .zero
-        glow.set()
-        NSColor(srgbRed: 0.34, green: 0.76, blue: 0.93, alpha: 1).setStroke()
-        line.stroke()
+        NSGraphicsContext.saveGraphicsState(); fill.setClip()
+        NSColor(srgbRed: 0.90, green: 0.91, blue: 0.92, alpha: 1).setFill(); bounds.fill()
         NSGraphicsContext.restoreGraphicsState()
     }
 
