@@ -26,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         statusItem = StatusItemController(
             onSettings: { [weak self] in self?.showSettings() },
+            onInstallTheme: { [weak self] in self?.installThemePack() },
             onRestoreIcons: { DesktopIcons.setHidden(false) },
             onQuit: { NSApp.terminate(nil) })
 
@@ -165,5 +166,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func launch(_ channel: Channel) {
         _ = Launcher(workspace: SystemWorkspace()).launch(channel.action)
+    }
+
+    /// Download the (third-party-hosted) Wii art pack into the user's theme
+    /// folder, then refresh the menu with the real art. The public repo hosts
+    /// none of these files — this is an opt-in fidelity upgrade.
+    func installThemePack() {
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        ThemePackInstaller.install(progress: { _ in }) { [weak self] result in
+            DispatchQueue.main.async {
+                let alert = NSAlert()
+                switch result {
+                case .success(let count):
+                    AssetLibrary.shared.reload()
+                    self?.rebuildMenu()
+                    alert.messageText = "Wii theme installed"
+                    alert.informativeText = "\(count) assets installed. Your menu now uses the Wii art."
+                case .failure(let error):
+                    alert.alertStyle = .warning
+                    alert.messageText = "Couldn't install the Wii theme"
+                    alert.informativeText = "\(error)\n\nSet the pack URL in ThemePackInstaller, then try again."
+                }
+                alert.runModal()
+                if self?.settingsWindow?.isVisible != true, self?.onboardingWindow?.isVisible != true {
+                    NSApp.setActivationPolicy(.accessory)
+                }
+            }
+        }
     }
 }

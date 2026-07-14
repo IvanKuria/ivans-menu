@@ -12,6 +12,7 @@ final class WiiMenuView: NSView {
     private var currentPage = 0
     private let leftArrow = WiiArrowButton()
     private let rightArrow = WiiArrowButton()
+    private let bgImageView = NSImageView()
     private var gridContainer = NSView()
     private var tiles: [ChannelTileView] = []
 
@@ -20,6 +21,11 @@ final class WiiMenuView: NSView {
         super.init(frame: .zero)
         wantsLayer = true
         applyBackgroundGradient()
+        if let bg = AssetLibrary.shared.image(.background) {
+            bgImageView.image = bg
+            bgImageView.imageScaling = .scaleAxesIndependently
+            addSubview(bgImageView)
+        }
         addSubview(gridContainer)
         addSubview(bottomBar)
         setupArrows()
@@ -74,6 +80,7 @@ final class WiiMenuView: NSView {
 
     override func layout() {
         super.layout()
+        bgImageView.frame = bounds
         let barH = bounds.height * 0.17
         bottomBar.frame = NSRect(x: 0, y: 0, width: bounds.width, height: barH)
         let gridArea = NSRect(x: 0, y: barH, width: bounds.width, height: bounds.height - barH)

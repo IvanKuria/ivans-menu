@@ -8,3 +8,6 @@ xcuserdata/
 .superpowers/
 IvansMenu.app/
 *.swp
+
+# Real Wii art — local only, never committed (copyright)
+Sources/IvansMenu/Resources/Wii/

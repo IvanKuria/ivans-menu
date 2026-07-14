@@ -221,6 +221,14 @@ final class WiiOrbButton: NSControl {
     private var tracking: NSTrackingArea?
 
     override func draw(_ dirtyRect: NSRect) {
+        // Prefer real Wii art if installed; otherwise draw the orb in Core Graphics.
+        let asset: WiiAsset = (symbol == .wii) ? .wiiButton : .mailButton
+        if let img = AssetLibrary.shared.image(asset) {
+            if hovered { WiiDraw.orbGlow(in: bounds) }
+            let rect = pressed ? bounds.insetBy(dx: bounds.width * 0.02, dy: bounds.height * 0.02) : bounds
+            img.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1)
+            return
+        }
         if hovered { WiiDraw.orbGlow(in: bounds) }
         WiiDraw.orb(in: bounds, pressed: pressed)
         let inner = bounds.insetBy(dx: bounds.width * 0.2, dy: bounds.height * 0.2)
@@ -254,6 +262,12 @@ final class WiiArrowButton: NSControl {
     private var tracking: NSTrackingArea?
 
     override func draw(_ dirtyRect: NSRect) {
+        let asset: WiiAsset = pointingLeft ? .arrowLeft : .arrowRight
+        if let img = AssetLibrary.shared.image(asset) {
+            let f: CGFloat = hovered ? 1.0 : 0.9
+            img.draw(in: bounds, from: .zero, operation: .sourceOver, fraction: f)
+            return
+        }
         WiiDraw.chevron(in: bounds, pointingLeft: pointingLeft, hovered: hovered)
     }
     override func updateTrackingAreas() {
