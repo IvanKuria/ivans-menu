@@ -207,16 +207,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func promptText(_ title: String, placeholder: String, initial: String) -> String? {
+        // Become a regular app so the alert's text field can take keyboard focus + paste.
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.messageText = title
-        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 280, height: 24))
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
         field.placeholderString = placeholder
         field.stringValue = initial
         alert.accessoryView = field
         alert.addButton(withTitle: "OK")
         alert.addButton(withTitle: "Cancel")
-        NSApp.activate(ignoringOtherApps: true)
-        return alert.runModal() == .alertFirstButtonReturn ? field.stringValue : nil
+        alert.window.initialFirstResponder = field
+        let response = alert.runModal()
+        if settingsWindow?.isVisible != true, onboardingWindow?.isVisible != true {
+            NSApp.setActivationPolicy(.accessory)
+        }
+        return response == .alertFirstButtonReturn ? field.stringValue : nil
     }
 
     /// Download the (third-party-hosted) Wii art pack into the user's theme
