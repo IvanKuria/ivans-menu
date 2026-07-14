@@ -12,31 +12,61 @@ struct SettingsView: View {
             aboutTab.tabItem { Text("About") }
         }
         .frame(width: 620, height: 520)
+        .wiiBackground()
         .onDisappear { vm.save() }
     }
 
     private var channelsTab: some View {
-        List(0..<Theme.totalSlots, id: \.self) { slot in
-            if let idx = vm.binding(forSlot: slot) {
-                ChannelRow(channel: $vm.config.channels[idx])
+        ScrollView {
+            VStack(spacing: 10) {
+                ForEach(0..<Theme.totalSlots, id: \.self) { slot in
+                    if let idx = vm.binding(forSlot: slot) {
+                        ChannelRow(channel: $vm.config.channels[idx])
+                    }
+                }
             }
+            .padding(16)
         }
     }
 
     private var settingsTab: some View {
-        Form {
-            Toggle("Sound effects", isOn: $vm.config.settings.soundEnabled)
-            Toggle("Ambient music", isOn: $vm.config.settings.musicEnabled)
-            Toggle("Hide desktop icons", isOn: $vm.config.settings.hideDesktopIcons)
-        }.padding()
+        VStack(alignment: .leading, spacing: 16) {
+            wiiToggle("Sound effects", isOn: $vm.config.settings.soundEnabled)
+            wiiToggle("Ambient music", isOn: $vm.config.settings.musicEnabled)
+            wiiToggle("Hide desktop icons", isOn: $vm.config.settings.hideDesktopIcons)
+            Spacer()
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func wiiToggle(_ title: String, isOn: Binding<Bool>) -> some View {
+        Toggle(isOn: isOn) {
+            Text(title)
+                .font(WiiFont.body(14))
+                .foregroundColor(.black.opacity(0.8))
+        }
+        .toggleStyle(.switch)
+        .tint(.wiiAccent)
+        .padding(12)
+        .wiiCard()
     }
 
     private var aboutTab: some View {
-        VStack(spacing: 12) {
-            Text("Ivan's Menu").font(.title.bold())
+        VStack(spacing: 14) {
+            Spacer()
+            Text("Ivan's Menu")
+                .font(WiiFont.title(26))
+                .foregroundColor(.black.opacity(0.8))
             Text("An unofficial, fan-made tribute. Not affiliated with, endorsed by, or sponsored by Nintendo. All Nintendo trademarks belong to their respective owners.")
-                .font(.footnote).multilineTextAlignment(.center).padding()
-        }.padding()
+                .font(WiiFont.body(12))
+                .foregroundColor(.black.opacity(0.6))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+            Spacer()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -45,16 +75,25 @@ struct ChannelRow: View {
     @State private var urlText: String = ""
 
     var body: some View {
-        HStack {
-            Text("Slot \(channel.slot)").frame(width: 60, alignment: .leading)
+        HStack(spacing: 10) {
+            Text("Slot \(channel.slot)")
+                .font(WiiFont.label())
+                .foregroundColor(.black.opacity(0.6))
+                .frame(width: 56, alignment: .leading)
             Button("Choose App…") { pickApp() }
+                .buttonStyle(.wii)
             TextField("https://…", text: $urlText, onCommit: {
                 channel.action = .url(urlText)
-            }).frame(width: 220)
+            })
+            .wiiField()
+            .frame(width: 200)
             TextField("Title", text: Binding(
                 get: { channel.title ?? "" },
                 set: { channel.title = $0.isEmpty ? nil : $0 }))
+            .wiiField()
         }
+        .padding(10)
+        .wiiCard()
     }
 
     private func pickApp() {
