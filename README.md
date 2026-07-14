@@ -1,4 +1,14 @@
-# Ivan's Menu
+<p align="center">
+  <img src="docs/icon.png" width="128" alt="Ivan's Menu app icon">
+</p>
+
+<h1 align="center">Ivan's Menu</h1>
+
+<p align="center">
+  <a href="https://github.com/IvanKuria/ivans-menu/releases/latest">
+    <img src="https://img.shields.io/github/v/release/IvanKuria/ivans-menu?label=Download&style=for-the-badge&color=4aa3df&logo=apple" alt="Download the latest release">
+  </a>
+</p>
 
 Turn your Mac desktop into a faithful, interactive Wii-style channel menu. Every channel launches a real app, website, file, or folder, and the whole thing lives behind your windows like a wallpaper.
 
