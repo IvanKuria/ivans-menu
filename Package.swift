@@ -9,6 +9,7 @@ let package = Package(
         .executableTarget(
             name: "IvansMenu",
             dependencies: ["IvansMenuKit"],
+            exclude: ["Info.plist"],
             resources: [.copy("Resources")]
         ),
         .testTarget(name: "IvansMenuKitTests", dependencies: ["IvansMenuKit"]),
