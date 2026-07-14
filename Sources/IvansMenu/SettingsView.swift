@@ -8,30 +8,20 @@ struct SettingsView: View {
 
     var body: some View {
         TabView {
-            channelsTab.tabItem { Text("Channels") }
             settingsTab.tabItem { Text("Settings") }
             aboutTab.tabItem { Text("About") }
         }
-        .frame(width: 620, height: 520)
+        .frame(width: 520, height: 420)
         .wiiBackground()
         .onDisappear { vm.save() }
     }
 
-    private var channelsTab: some View {
-        ScrollView {
-            VStack(spacing: 10) {
-                ForEach(0..<Theme.totalSlots, id: \.self) { slot in
-                    if let idx = vm.binding(forSlot: slot) {
-                        ChannelRow(channel: $vm.config.channels[idx])
-                    }
-                }
-            }
-            .padding(16)
-        }
-    }
-
     private var settingsTab: some View {
         VStack(alignment: .leading, spacing: 16) {
+            Text("Set up channels by right-clicking any tile on the menu.")
+                .font(WiiFont.body(13))
+                .foregroundColor(.black.opacity(0.55))
+                .padding(.bottom, 4)
             wiiToggle("Sound effects", isOn: $vm.config.settings.soundEnabled)
             wiiToggle("Ambient music", isOn: $vm.config.settings.musicEnabled)
             wiiToggle("Hide desktop icons", isOn: $vm.config.settings.hideDesktopIcons)

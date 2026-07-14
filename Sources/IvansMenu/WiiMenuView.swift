@@ -96,7 +96,8 @@ final class WiiMenuView: NSView {
     override func layout() {
         super.layout()
         bgImageView.frame = bounds
-        let barH = bounds.height * 0.20
+        // Size the bar to the real bar asset's aspect so it fills without distortion.
+        let barH = min(bounds.height * 0.30, bounds.width / BottomBarView.aspect)
         bottomBar.frame = NSRect(x: 0, y: 0, width: bounds.width, height: barH)
         let gridArea = NSRect(x: 0, y: barH, width: bounds.width, height: bounds.height - barH)
         gridContainer.frame = gridArea

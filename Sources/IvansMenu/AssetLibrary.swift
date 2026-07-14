@@ -11,6 +11,7 @@ import AppKit
 enum WiiAsset: String, CaseIterable {
     case background
     case bottombar
+    case barFull = "bar_full"
     case wave
     case channelFrame = "channel_frame"
     case frameCyan = "frame_cyan"

@@ -12,6 +12,7 @@ final class WallpaperWindow: NSWindow {
         self.hasShadow = false
         self.isReleasedWhenClosed = false
         self.ignoresMouseEvents = false
+        self.acceptsMouseMovedEvents = true   // so the Wii cursor can be set on move
         self.setFrame(screen.frame, display: true)
     }
     // Don't become key/main: clicks still register via the views' acceptsFirstMouse,

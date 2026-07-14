@@ -1,16 +1,30 @@
 import AppKit
 import IvansMenuKit
 
+/// A transparent clickable region (used over the baked-in Wii/mail buttons).
+@MainActor
+final class ClickRegion: NSView {
+    var onClick: () -> Void = {}
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func cursorUpdate(with event: NSEvent) { WiiCursor.shared?.set() }
+    override func mouseUp(with event: NSEvent) {
+        if bounds.contains(convert(event.locationInWindow, from: nil)) { onClick() }
+    }
+}
+
 @MainActor
 final class BottomBarView: NSView {
+    /// Bar asset aspect ratio (bar_full.png is 2000×346).
+    static let aspect: CGFloat = 2000.0 / 346.0
+
     var onWii: () -> Void = {}
     var onMail: () -> Void = {}
 
     private var curHour = 0
     private var curMinute = 0
     private let dateLabel = NSTextField(labelWithString: "")
-    private let wiiButton = WiiOrbButton()
-    private let mailButton = WiiOrbButton()
+    private let wiiRegion = ClickRegion()
+    private let mailRegion = ClickRegion()
     private nonisolated(unsafe) var timer: Timer?
     private var blinkOn = false
 
@@ -21,20 +35,17 @@ final class BottomBarView: NSView {
 
     private func setup() {
         wantsLayer = true
-        layer?.backgroundColor = NSColor.clear.cgColor   // curved fill is drawn, not a rect
+        layer?.backgroundColor = NSColor.clear.cgColor
 
         dateLabel.font = WiiDraw.roundedFont(ofSize: 19, weight: .medium)
         dateLabel.textColor = .wiiClock
         dateLabel.alignment = .center
         addSubview(dateLabel)
 
-        wiiButton.symbol = .wii
-        wiiButton.target = self; wiiButton.action = #selector(wiiTapped)
-        addSubview(wiiButton)
-
-        mailButton.symbol = .envelope
-        mailButton.target = self; mailButton.action = #selector(mailTapped)
-        addSubview(mailButton)
+        wiiRegion.onClick = { [weak self] in self?.onWii() }
+        mailRegion.onClick = { [weak self] in self?.onMail() }
+        addSubview(wiiRegion)
+        addSubview(mailRegion)
 
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
@@ -43,71 +54,20 @@ final class BottomBarView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        drawBar()
-        drawSDGlyph()
+        if let bar = AssetLibrary.shared.image(.barFull) {
+            bar.draw(in: bounds, from: .zero, operation: .sourceOver, fraction: 1)
+        } else {
+            NSColor.wiiBottomBar.setFill(); bounds.fill()
+        }
         drawClock()
-    }
-
-    /// The bottom panel. Uses the real Wii bar texture (the left half of the
-    /// symmetric bent-bevel curve, mirrored for the right) drawn in its natural
-    /// shading, with a cyan edge line produced by a cyan copy peeking behind it.
-    /// Falls back to a drawn curve only if the texture is missing.
-    private func drawBar() {
-        guard let bar = AssetLibrary.shared.image(.bottombar) else { drawBarFallback(); return }
-        let cyan = bar.tinted(with: NSColor(srgbRed: 0.30, green: 0.74, blue: 0.93, alpha: 1))
-        let lineOffset = max(2, bounds.height * 0.02)
-        if let cyan { drawBarHalves(cyan, dy: lineOffset) }   // cyan edge peeks above…
-        drawBarHalves(bar, dy: 0)                             // …the natural bar on top
-    }
-
-    private func drawBarHalves(_ image: NSImage, dy: CGFloat) {
-        let halfW = bounds.width / 2
-        image.draw(in: NSRect(x: 0, y: dy, width: halfW, height: bounds.height),
-                   from: .zero, operation: .sourceOver, fraction: 1)
-        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
-        ctx.saveGState()
-        ctx.translateBy(x: bounds.width, y: 0)
-        ctx.scaleBy(x: -1, y: 1)
-        image.draw(in: NSRect(x: 0, y: dy, width: halfW, height: bounds.height),
-                   from: .zero, operation: .sourceOver, fraction: 1)
-        ctx.restoreGState()
-    }
-
-    private func drawBarFallback() {
-        let W = bounds.width, H = bounds.height
-        let base = H * 0.56, amp = H * 0.26
-        func edge(_ x: CGFloat) -> CGFloat { base + amp * cos(2 * .pi * x / W) }
-        let fill = NSBezierPath()
-        fill.move(to: NSPoint(x: 0, y: 0)); fill.line(to: NSPoint(x: 0, y: edge(0)))
-        var x: CGFloat = 0
-        while x <= W { fill.line(to: NSPoint(x: x, y: edge(x))); x += 2 }
-        fill.line(to: NSPoint(x: W, y: 0)); fill.close()
-        NSGraphicsContext.saveGraphicsState(); fill.setClip()
-        NSColor(srgbRed: 0.90, green: 0.91, blue: 0.92, alpha: 1).setFill(); bounds.fill()
-        NSGraphicsContext.restoreGraphicsState()
     }
 
     private func drawClock() {
         let w = bounds.width, h = bounds.height
-        // Keep the clock well below the bevel's central valley so it never crosses it.
-        let clockRect = NSRect(x: w/2 - 170, y: h * 0.24, width: 340, height: h * 0.26)
+        // The bar's grey valley sits in the lower-center; place the clock there.
+        let clockRect = NSRect(x: w/2 - 150, y: h * 0.26, width: 300, height: h * 0.24)
         WiiDraw.sevenSegment(hour: curHour, minute: curMinute, blinkOn: blinkOn,
                              twentyFourHour: false, in: clockRect, color: .wiiClock)
-    }
-
-    private func drawSDGlyph() {
-        let d = bounds.height * 0.82
-        if let sd = AssetLibrary.shared.image(.sdCard) {
-            let sw = d * 0.34, sh = sw * 1.26
-            sd.draw(in: NSRect(x: bounds.minX + bounds.width * 0.035 + d + d * 0.12,
-                               y: bounds.midY - sh * 0.5, width: sw, height: sh),
-                    from: .zero, operation: .sourceOver, fraction: 1)
-            return
-        }
-        let sd = d * 0.30
-        let sdRect = NSRect(x: bounds.minX + bounds.width * 0.035 + d + d * 0.14,
-                            y: bounds.midY - sd * 0.65, width: sd, height: sd * 1.3)
-        WiiDraw.sdCard(in: sdRect)
     }
 
     private func tick() {
@@ -124,15 +84,13 @@ final class BottomBarView: NSView {
     override func layout() {
         super.layout()
         let w = bounds.width, h = bounds.height
-        dateLabel.frame = NSRect(x: w/2 - 200, y: h * 0.06, width: 400, height: 24)
-        let d = h * 0.82
-        let inset = w * 0.035
-        wiiButton.frame = NSRect(x: inset, y: (h - d)/2, width: d, height: d)
-        mailButton.frame = NSRect(x: w - inset - d, y: (h - d)/2, width: d, height: d)
+        dateLabel.frame = NSRect(x: w/2 - 200, y: h * 0.06, width: 400, height: 22)
+        // Click regions over the baked-in Wii (left) and mail (right) buttons.
+        let bw = w * 0.14, bh = h * 0.62
+        wiiRegion.frame = NSRect(x: w * 0.095 - bw/2, y: h * 0.306 - bh/2, width: bw, height: bh)
+        mailRegion.frame = NSRect(x: w * 0.9075 - bw/2, y: h * 0.306 - bh/2, width: bw, height: bh)
         needsDisplay = true
     }
 
-    @objc private func wiiTapped() { onWii() }
-    @objc private func mailTapped() { onMail() }
     deinit { timer?.invalidate() }
 }

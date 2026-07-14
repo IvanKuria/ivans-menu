@@ -10,12 +10,15 @@ final class ChannelTileView: NSView {
     var onEdit: (Int, ChannelEdit) -> Void = { _, _ in }
     private let channel: Channel
     private let bannerView = NSImageView()   // channel art (occupied) or empty card
-    private let frameView = NSImageView()     // real cyan Wii frame overlay (occupied)
+    private let frameView = NSImageView()     // real Wii frame overlay (populated)
+    private let populated: Bool
     private var hovered = false
     private var tracking: NSTrackingArea?
 
     init(channel: Channel, image: NSImage) {
         self.channel = channel
+        let hasCustomThumb: Bool = { if case .custom = channel.banner { return true }; return false }()
+        self.populated = !channel.isEmpty || hasCustomThumb
         super.init(frame: .zero)
         wantsLayer = true
         layer?.setAffineTransform(CGAffineTransform(scaleX: Theme.hoverScaleFrom,
@@ -25,11 +28,12 @@ final class ChannelTileView: NSView {
         bannerView.wantsLayer = true
         frameView.imageScaling = .scaleAxesIndependently
 
-        if !channel.isEmpty {
+        // "populated" (set in init) is true when the channel launches something OR
+        // has a custom thumbnail — so a thumbnail can be set on its own and still show.
+        if populated {
             bannerView.layer?.masksToBounds = true
             bannerView.image = image
-            frameView.image = AssetLibrary.shared.image(.frameCyan)
-                ?? AssetLibrary.shared.image(.frameGray)
+            frameView.image = AssetLibrary.shared.image(.frameGray)   // no cyan glow
         } else {
             // Real Wii empty-slot card (light pillow + faint "Wii" watermark).
             bannerView.image = AssetLibrary.shared.image(.emptyCard)
@@ -62,7 +66,7 @@ final class ChannelTileView: NSView {
         super.layout()
         let card = cardRect()
         frameView.frame = card
-        if !channel.isEmpty {
+        if populated {
             let inset = card.insetBy(dx: card.width * 0.045, dy: card.height * 0.05)
             bannerView.frame = inset
             bannerView.layer?.cornerRadius = inset.width * Theme.tileCornerFraction
