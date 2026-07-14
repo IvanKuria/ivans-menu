@@ -21,12 +21,8 @@ final class WiiMenuView: NSView {
         self.config = config; self.renderer = renderer
         super.init(frame: .zero)
         wantsLayer = true
-        applyBackgroundGradient()
-        if let bg = AssetLibrary.shared.image(.background) {
-            bgImageView.image = bg
-            bgImageView.imageScaling = .scaleAxesIndependently
-            addSubview(bgImageView)
-        }
+        // Background (gradient + scanlines) is drawn in draw(_:); no image layer,
+        // which would otherwise cover the scanlines.
         addSubview(gridContainer)
         addSubview(bottomBar)
         setupArrows()
@@ -35,13 +31,23 @@ final class WiiMenuView: NSView {
     }
     required init?(coder: NSCoder) { fatalError() }
 
-    private func applyBackgroundGradient() {
-        let g = CAGradientLayer()
-        g.type = .radial
-        g.colors = [NSColor.wiiBGCenter.cgColor, NSColor.wiiBGEdge.cgColor]
-        g.startPoint = CGPoint(x: 0.5, y: 0.55)
-        g.endPoint = CGPoint(x: 1.35, y: 1.35)   // push the darker edge outward (gentle vignette)
-        layer = g
+    override func draw(_ dirtyRect: NSRect) {
+        // Radial gradient background.
+        let grad = NSGradient(colors: [NSColor.wiiBGCenter, NSColor.wiiBGEdge],
+                              atLocations: [0, 1], colorSpace: .sRGB)!
+        grad.draw(in: bounds, relativeCenterPosition: NSPoint(x: 0, y: 0.05))
+        // Horizontal "static" scanlines across the whole background, matching the bar.
+        let period: CGFloat = 6
+        let line = NSBezierPath()
+        line.lineWidth = 1
+        var y = bounds.height.truncatingRemainder(dividingBy: period)
+        while y < bounds.height {
+            line.move(to: NSPoint(x: 0, y: y + 0.5))
+            line.line(to: NSPoint(x: bounds.width, y: y + 0.5))
+            y += period
+        }
+        NSColor(white: 0.66, alpha: 0.14).setStroke()
+        line.stroke()
     }
 
     private func setupArrows() {
