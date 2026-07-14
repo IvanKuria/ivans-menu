@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import IvansMenuKit
 import UniformTypeIdentifiers
 
@@ -8,6 +9,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var config: AppConfig = .makeDefault()
     let windowController = WallpaperWindowController()
     var statusItem: StatusItemController?
+    var settingsWindow: NSWindow?
+    lazy var settingsVM = ChannelStoreVM(store: store)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         config = store.load()
@@ -41,7 +44,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if config.settings.hideDesktopIcons { DesktopIcons.setHidden(false) }
     }
 
-    func showSettings() {}
+    func showSettings() {
+        if settingsWindow == nil {
+            let host = NSHostingController(rootView: SettingsView(vm: settingsVM))
+            let win = NSWindow(contentViewController: host)
+            win.title = "Ivan's Menu"
+            win.styleMask = [.titled, .closable]
+            settingsWindow = win
+        }
+        NSApp.setActivationPolicy(.regular)
+        settingsWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
 
     func launch(_ channel: Channel) {
         _ = Launcher(workspace: SystemWorkspace()).launch(channel.action)
