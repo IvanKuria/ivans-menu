@@ -23,6 +23,8 @@ final class ChannelTileView: NSView {
         wantsLayer = true
         layer?.setAffineTransform(CGAffineTransform(scaleX: Theme.hoverScaleFrom,
                                                     y: Theme.hoverScaleFrom))
+        // Fill the frame interior edge-to-edge (custom thumbs may be any aspect); the
+        // rounded-corner clip below hides any overflow past the frame opening.
         bannerView.imageScaling = .scaleAxesIndependently
         bannerView.animates = true
         bannerView.wantsLayer = true
@@ -46,10 +48,16 @@ final class ChannelTileView: NSView {
 
     private func cardRect() -> NSRect { bounds.insetBy(dx: bounds.width * 0.05, dy: bounds.height * 0.06) }
 
+    /// Corner radius of the frame_gray.png rounded opening, as a fraction of the card
+    /// width. Measured from the asset (≈14px / 340px). The banner's clip and the shadow
+    /// pillow both use this so the banner, the gray border, and the shadow share one
+    /// rounded-rect shape — no double border, no corners poking past the frame.
+    private static let frameCornerFraction: CGFloat = 0.045
+
     override func draw(_ dirtyRect: NSRect) {
         // Soft drop shadow under the tile (the cyan glow itself is baked into the frame PNG).
         let card = cardRect()
-        let radius = card.width * Theme.tileCornerFraction
+        let radius = card.width * Self.frameCornerFraction
         let path = NSBezierPath(roundedRect: card, xRadius: radius, yRadius: radius)
         NSGraphicsContext.saveGraphicsState()
         let shadow = NSShadow()
@@ -67,9 +75,11 @@ final class ChannelTileView: NSView {
         let card = cardRect()
         frameView.frame = card
         if populated {
-            let inset = card.insetBy(dx: card.width * 0.045, dy: card.height * 0.05)
-            bannerView.frame = inset
-            bannerView.layer?.cornerRadius = inset.width * Theme.tileCornerFraction
+            // Banner fills the whole card and is clipped to the frame's rounded opening,
+            // so custom thumbnails go edge-to-edge with no white padding and no corners
+            // poking past the gray border (which overlays right at the card edge).
+            bannerView.frame = card
+            bannerView.layer?.cornerRadius = card.width * Self.frameCornerFraction
         } else {
             bannerView.frame = card
         }

@@ -13,6 +13,6 @@ final class ClockFormatterTests: XCTestCase {
         cal.timeZone = TimeZone(identifier: "UTC")!
         var comps = DateComponents(); comps.year = 2020; comps.month = 6; comps.day = 19
         let date = cal.date(from: comps)!  // 2020-06-19 is a Friday
-        XCTAssertEqual(ClockFormatter.date(date, calendar: cal), "Fri 19/6")
+        XCTAssertEqual(ClockFormatter.date(date, calendar: cal), "Fri 6/19")
     }
 }

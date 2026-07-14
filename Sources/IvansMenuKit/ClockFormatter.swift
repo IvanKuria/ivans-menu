@@ -16,6 +16,6 @@ public enum ClockFormatter {
         df.dateFormat = "EEE"
         let weekday = df.string(from: date)
         let c = calendar.dateComponents([.day, .month], from: date)
-        return "\(weekday) \(c.day!)/\(c.month!)"
+        return "\(weekday) \(c.month!)/\(c.day!)"
     }
 }

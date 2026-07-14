@@ -86,9 +86,10 @@ final class BottomBarView: NSView {
         let w = bounds.width, h = bounds.height
         dateLabel.frame = NSRect(x: w/2 - 200, y: h * 0.26, width: 400, height: 34)
         // Click regions over the baked-in Wii (left) and mail (right) buttons.
-        let bw = w * 0.14, bh = h * 0.62
-        wiiRegion.frame = NSRect(x: w * 0.095 - bw/2, y: h * 0.306 - bh/2, width: bw, height: bh)
-        mailRegion.frame = NSRect(x: w * 0.9075 - bw/2, y: h * 0.306 - bh/2, width: bw, height: bh)
+        // Centers measured from the bar asset: Wii x=0.089, mail x=0.917, y~0.54 from bottom.
+        let bw = w * 0.12, bh = h * 0.68
+        wiiRegion.frame = NSRect(x: w * 0.089 - bw/2, y: h * 0.52 - bh/2, width: bw, height: bh)
+        mailRegion.frame = NSRect(x: w * 0.917 - bw/2, y: h * 0.52 - bh/2, width: bw, height: bh)
         needsDisplay = true
     }
 
