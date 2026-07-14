@@ -4,7 +4,7 @@ import IvansMenuKit
 import UniformTypeIdentifiers
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let store = ConfigStore()
     private(set) var config: AppConfig = .makeDefault()
     let windowController = WallpaperWindowController()
@@ -50,11 +50,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let win = NSWindow(contentViewController: host)
             win.title = "Ivan's Menu"
             win.styleMask = [.titled, .closable]
+            win.delegate = self
             settingsWindow = win
         }
+        settingsWindow?.delegate = self
         NSApp.setActivationPolicy(.regular)
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow else { return }
+        if window === settingsWindow {
+            NSApp.setActivationPolicy(.accessory)
+        }
     }
 
     func launch(_ channel: Channel) {
