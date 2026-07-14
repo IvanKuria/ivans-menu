@@ -10,7 +10,6 @@ final class ChannelTileView: NSView {
     var onEdit: (Int, ChannelEdit) -> Void = { _, _ in }
     private let channel: Channel
     private let bannerView = NSImageView()   // channel art (occupied) or empty card
-    private let frameView = NSImageView()     // real Wii frame overlay (populated)
     private let populated: Bool
     private var hovered = false
     private var tracking: NSTrackingArea?
@@ -28,21 +27,21 @@ final class ChannelTileView: NSView {
         bannerView.imageScaling = .scaleAxesIndependently
         bannerView.animates = true
         bannerView.wantsLayer = true
-        frameView.imageScaling = .scaleAxesIndependently
+        bannerView.layer?.masksToBounds = true
 
         // "populated" (set in init) is true when the channel launches something OR
         // has a custom thumbnail — so a thumbnail can be set on its own and still show.
         if populated {
-            bannerView.layer?.masksToBounds = true
             bannerView.image = image
-            frameView.image = AssetLibrary.shared.image(.frameGray)   // no cyan glow
+            // Clean, uniform gray border drawn on the banner's own rounded layer
+            // (the ripped frame outline was hand-drawn and wobbly).
+            bannerView.layer?.borderColor = NSColor(srgbRed: 0.78, green: 0.79, blue: 0.81, alpha: 1).cgColor
         } else {
             // Real Wii empty-slot card (light pillow + faint "Wii" watermark).
             bannerView.image = AssetLibrary.shared.image(.emptyCard)
                 ?? AssetLibrary.shared.image(.emptyFrame)
         }
         addSubview(bannerView)
-        addSubview(frameView)
     }
     required init?(coder: NSCoder) { fatalError() }
 
@@ -73,16 +72,10 @@ final class ChannelTileView: NSView {
     override func layout() {
         super.layout()
         let card = cardRect()
-        frameView.frame = card
-        if populated {
-            // Banner fills the whole card and is clipped to the frame's rounded opening,
-            // so custom thumbnails go edge-to-edge with no white padding and no corners
-            // poking past the gray border (which overlays right at the card edge).
-            bannerView.frame = card
-            bannerView.layer?.cornerRadius = card.width * Self.frameCornerFraction
-        } else {
-            bannerView.frame = card
-        }
+        bannerView.frame = card
+        bannerView.layer?.cornerRadius = card.width * Self.frameCornerFraction
+        // Uniform gray border for populated tiles; empty cards carry their own edge.
+        bannerView.layer?.borderWidth = populated ? max(1, card.width * 0.014) : 0
     }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }

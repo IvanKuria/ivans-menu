@@ -1,11 +1,46 @@
 import AppKit
 import IvansMenuKit
 
-/// A transparent clickable region (used over the baked-in Wii/mail buttons).
+/// A transparent clickable region over a baked-in bar button, with a hover glow.
 @MainActor
 final class ClickRegion: NSView {
     var onClick: () -> Void = {}
+    private var hovered = false { didSet { needsDisplay = true } }
+    private var tracking: NSTrackingArea?
+
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let tracking { removeTrackingArea(tracking) }
+        let t = NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeAlways],
+                               owner: self, userInfo: nil)
+        addTrackingArea(t); tracking = t
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        guard hovered else { return }
+        // Highlight the round button under this region: soft white lift + cyan ring.
+        let d = min(bounds.width, bounds.height)
+        let circle = NSRect(x: bounds.midX - d/2, y: bounds.midY - d/2, width: d, height: d)
+            .insetBy(dx: d * 0.06, dy: d * 0.06)
+        NSColor.white.withAlphaComponent(0.35).setFill()
+        NSBezierPath(ovalIn: circle).fill()
+        NSGraphicsContext.saveGraphicsState()
+        let glow = NSShadow()
+        glow.shadowColor = WiiPalette.accent.withAlphaComponent(0.9)
+        glow.shadowBlurRadius = d * 0.06
+        glow.shadowOffset = .zero
+        glow.set()
+        WiiPalette.accent.setStroke()
+        let ring = NSBezierPath(ovalIn: circle)
+        ring.lineWidth = max(2, d * 0.03)
+        ring.stroke()
+        NSGraphicsContext.restoreGraphicsState()
+    }
+
+    override func mouseEntered(with event: NSEvent) { hovered = true; AudioEngine.shared.play(.hover) }
+    override func mouseExited(with event: NSEvent) { hovered = false }
     override func mouseUp(with event: NSEvent) {
         if bounds.contains(convert(event.locationInWindow, from: nil)) { onClick() }
     }
