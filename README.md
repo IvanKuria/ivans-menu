@@ -40,7 +40,13 @@ cd ivans-menu
 open IvansMenu.app
 ```
 
-The repository ships original, hand-drawn fallback art, so a fresh clone runs on its own. A higher-fidelity theme pack can be installed later from Settings.
+The repository ships original, hand-drawn fallback art, so a fresh clone runs on its own. A higher-fidelity theme pack can be installed later from Settings, or headlessly:
+
+```bash
+.build/debug/IvansMenu --install-theme
+```
+
+That downloads the pack into `~/Library/Application Support/Ivan's Menu/Wii/`. Point it at a different manifest by passing a URL after the flag.
 
 ## Usage
 
