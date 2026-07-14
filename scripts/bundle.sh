@@ -18,6 +18,14 @@ fi
 BUNDLE=$(find -L .build/release -maxdepth 1 -name "*IvansMenu*.bundle" | head -1 || true)
 if [ -n "${BUNDLE:-}" ]; then cp -R "$BUNDLE" "$APP/Contents/Resources/"; fi
 
+# For distribution (STRIP_THEME_ART=1), remove the real Wii art from the bundle
+# so the shipped DMG hosts none of it. The app fetches the theme pack on first
+# launch instead. Must run before signing so the signature stays valid.
+if [ -n "${STRIP_THEME_ART:-}" ]; then
+  find "$APP/Contents/Resources" -type d -path "*/Resources/Wii" -exec rm -rf {} + 2>/dev/null || true
+  echo "Stripped bundled Wii art (distribution build; app fetches it at runtime)."
+fi
+
 if [ -n "${DEVELOPER_ID:-}" ]; then
   # Hardened runtime + secure timestamp are both required for notarization.
   codesign --deep --force --options runtime --timestamp \

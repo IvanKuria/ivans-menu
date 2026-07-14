@@ -46,6 +46,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if !UserDefaults.standard.bool(forKey: "didOnboard") {
             showOnboarding()
         }
+
+        // Any launch without the art installed (a fresh download of the
+        // asset-free DMG) silently pulls the theme pack so the real Wii look
+        // appears on its own. On failure (offline) it stays on the drawn
+        // fallback and retries next launch. No prompt, no blocking.
+        if !AssetLibrary.shared.hasArt {
+            ThemePackInstaller.install(progress: { _ in }) { [weak self] result in
+                DispatchQueue.main.async {
+                    guard case .success = result else { return }
+                    AssetLibrary.shared.reload()
+                    self?.rebuildMenu()
+                }
+            }
+        }
     }
 
     private func buildMenuContent(_ screen: NSScreen) -> NSView {

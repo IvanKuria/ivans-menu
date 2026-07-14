@@ -32,8 +32,8 @@ if [ -z "${DEVELOPER_ID:-}" ]; then
   exit 1
 fi
 
-echo "==> Building and signing $APP"
-DEVELOPER_ID="$DEVELOPER_ID" ./scripts/bundle.sh
+echo "==> Building and signing $APP (asset-free; fetches theme pack on first launch)"
+STRIP_THEME_ART=1 DEVELOPER_ID="$DEVELOPER_ID" ./scripts/bundle.sh
 
 echo "==> Building $DMG"
 rm -f "$DMG"
