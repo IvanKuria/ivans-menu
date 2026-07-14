@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let windowController = WallpaperWindowController()
     var statusItem: StatusItemController?
     var settingsWindow: NSWindow?
+    var onboardingWindow: NSWindow?
     lazy var settingsVM = ChannelStoreVM(store: store)
     var hotKey: GlobalHotKey?
     var peeking = false
@@ -18,22 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         config = store.load()
         NSApp.setActivationPolicy(.accessory) // agent app, no Dock icon
 
-        let renderer = BannerRenderer(
-            packIDs: [],
-            packImage: { _ in nil },
-            appIcon: { action in
-                if case .app(let path) = action {
-                    return NSWorkspace.shared.icon(forFile: path)
-                }
-                return NSWorkspace.shared.icon(for: UTType.data)
-            })
-        windowController.rebuild { [weak self] _ in
-            guard let self else { return NSView() }
-            let menu = WiiMenuView(config: self.config, renderer: renderer)
-            menu.onWii = { [weak self] in self?.showSettings() }
-            menu.onLaunch = { [weak self] channel in self?.launch(channel) }
-            return menu
-        }
+        rebuildMenu()
 
         if config.settings.hideDesktopIcons { DesktopIcons.setHidden(true) }
 
@@ -48,6 +34,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         AudioEngine.shared.soundEnabled = config.settings.soundEnabled
         AudioEngine.shared.musicEnabled = config.settings.musicEnabled
         AudioEngine.shared.startMusic()
+
+        if !UserDefaults.standard.bool(forKey: "didOnboard") {
+            showOnboarding()
+        }
+    }
+
+    private func buildMenuContent(_ screen: NSScreen) -> NSView {
+        let renderer = BannerRenderer(
+            packIDs: [],
+            packImage: { _ in nil },
+            appIcon: { action in
+                if case .app(let path) = action {
+                    return NSWorkspace.shared.icon(forFile: path)
+                }
+                return NSWorkspace.shared.icon(for: UTType.data)
+            })
+        let menu = WiiMenuView(config: self.config, renderer: renderer)
+        menu.onWii = { [weak self] in self?.showSettings() }
+        menu.onLaunch = { [weak self] channel in self?.launch(channel) }
+        return menu
+    }
+
+    private func rebuildMenu() {
+        windowController.rebuild { [weak self] screen in
+            guard let self else { return NSView() }
+            return self.buildMenuContent(screen)
+        }
+    }
+
+    func reloadMenu() {
+        config = store.load()
+        rebuildMenu()
+    }
+
+    private func showOnboarding() {
+        let host = NSHostingController(rootView:
+            OnboardingView(vm: settingsVM) { [weak self] in
+                self?.onboardingWindow?.close()
+                self?.reloadMenu()
+            })
+        let win = NSWindow(contentViewController: host)
+        win.title = "Welcome to Ivan's Menu"
+        win.styleMask = [.titled]
+        win.delegate = self
+        NSApp.setActivationPolicy(.regular)
+        win.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
+        onboardingWindow = win
     }
 
     func togglePeek() {
@@ -76,8 +109,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
-        if window === settingsWindow {
+        if window === settingsWindow || window === onboardingWindow {
             NSApp.setActivationPolicy(.accessory)
+        }
+        if window === onboardingWindow {
+            onboardingWindow = nil
         }
     }
 
