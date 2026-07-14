@@ -20,12 +20,14 @@ final class ClickRegion: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         guard hovered else { return }
-        // Highlight the round button under this region: soft white lift + cyan ring.
+        // The bar asset already draws a blue ring around this button. The region is
+        // sized to the button diameter, so we light that ring up in place: a soft
+        // white lift inside + a glowing cyan stroke laid right on the asset ring.
         let d = min(bounds.width, bounds.height)
         let circle = NSRect(x: bounds.midX - d/2, y: bounds.midY - d/2, width: d, height: d)
-            .insetBy(dx: d * 0.06, dy: d * 0.06)
-        NSColor.white.withAlphaComponent(0.35).setFill()
-        NSBezierPath(ovalIn: circle).fill()
+            .insetBy(dx: d * 0.03, dy: d * 0.03)
+        NSColor.white.withAlphaComponent(0.30).setFill()
+        NSBezierPath(ovalIn: circle.insetBy(dx: d * 0.06, dy: d * 0.06)).fill()
         NSGraphicsContext.saveGraphicsState()
         let glow = NSShadow()
         glow.shadowColor = WiiPalette.accent.withAlphaComponent(0.9)
@@ -34,7 +36,7 @@ final class ClickRegion: NSView {
         glow.set()
         WiiPalette.accent.setStroke()
         let ring = NSBezierPath(ovalIn: circle)
-        ring.lineWidth = max(2, d * 0.03)
+        ring.lineWidth = max(2, d * 0.035)
         ring.stroke()
         NSGraphicsContext.restoreGraphicsState()
     }
@@ -71,7 +73,7 @@ final class BottomBarView: NSView {
         wantsLayer = true
         layer?.backgroundColor = NSColor.clear.cgColor
 
-        dateLabel.font = WiiDraw.roundedFont(ofSize: 26, weight: .medium)
+        dateLabel.font = WiiDraw.roundedFont(ofSize: 38, weight: .medium)
         dateLabel.textColor = .wiiClock
         dateLabel.alignment = .center
         addSubview(dateLabel)
@@ -119,12 +121,16 @@ final class BottomBarView: NSView {
     override func layout() {
         super.layout()
         let w = bounds.width, h = bounds.height
-        dateLabel.frame = NSRect(x: w/2 - 200, y: h * 0.26, width: 400, height: 34)
-        // Click regions over the baked-in Wii (left) and mail (right) buttons.
-        // Centers measured from the bar asset: Wii x=0.089, mail x=0.917, y~0.54 from bottom.
-        let bw = w * 0.12, bh = h * 0.68
-        wiiRegion.frame = NSRect(x: w * 0.089 - bw/2, y: h * 0.52 - bh/2, width: bw, height: bh)
-        mailRegion.frame = NSRect(x: w * 0.917 - bw/2, y: h * 0.52 - bh/2, width: bw, height: bh)
+        dateLabel.frame = NSRect(x: w/2 - 250, y: h * 0.20, width: 500, height: 50)
+        // Click regions sit exactly over the baked-in Wii (left) and mail (right)
+        // buttons. Centers + diameter measured from the bar asset's own blue rings
+        // (clean-edge derivation): Wii cx=0.0912, mail cx=0.9097, cy=0.40 from bottom,
+        // ring diameter = 0.0885·barWidth. Region is a square of that diameter so the
+        // hover ring lands on the asset ring instead of floating above-left of it.
+        let d = w * 0.0885
+        let cy = h * 0.40
+        wiiRegion.frame = NSRect(x: w * 0.0912 - d/2, y: cy - d/2, width: d, height: d)
+        mailRegion.frame = NSRect(x: w * 0.9097 - d/2, y: cy - d/2, width: d, height: d)
         needsDisplay = true
     }
 

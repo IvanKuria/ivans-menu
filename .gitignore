@@ -17,3 +17,6 @@ Sources/IvansMenu/Resources/Sounds/*.caf
 Sources/IvansMenu/Resources/Sounds/*.m4a
 Sources/IvansMenu/Resources/Sounds/*.mp3
 Sources/IvansMenu/Resources/Sounds/*.wav
+
+# Icon generation intermediates (regenerable via scripts/make_icon.sh)
+scripts/build/

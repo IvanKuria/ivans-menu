@@ -181,7 +181,7 @@ enum WiiDraw {
     static func pillowPath(in rect: NSRect, radius: CGFloat) -> NSBezierPath {
         let p = NSBezierPath()
         let r = radius
-        let b = min(rect.width, rect.height) * 0.028   // edge bulge (subtle, like the real Wii)
+        let b = min(rect.width, rect.height) * 0.034   // edge bulge (pillowy, like the real Wii)
         let w = rect.width, h = rect.height
         // bottom edge (convex down)
         p.move(to: NSPoint(x: rect.minX + r, y: rect.minY))

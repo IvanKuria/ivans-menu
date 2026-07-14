@@ -13,7 +13,7 @@ public enum Theme {
     public static let pageCount = 4
     public static var slotsPerPage: Int { columns * rows }       // 12
     public static var totalSlots: Int { slotsPerPage * pageCount } // 48
-    public static let tileAspect: Double = 1.82                  // width : height
-    public static let tileCornerFraction: Double = 0.10
+    public static let tileAspect: Double = 1.72                  // width : height (OG Wii pillows, not too wide)
+    public static let tileCornerFraction: Double = 0.075         // generous pillow rounding
     public static let hoverScaleFrom: Double = 0.94
 }

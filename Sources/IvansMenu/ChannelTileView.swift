@@ -33,7 +33,7 @@ final class ChannelTileView: NSView {
     private var hovered = false
     private var tracking: NSTrackingArea?
 
-    private static let cornerFraction: CGFloat = 0.05
+    private static let cornerFraction = CGFloat(Theme.tileCornerFraction)
 
     init(channel: Channel, image: NSImage) {
         self.channel = channel

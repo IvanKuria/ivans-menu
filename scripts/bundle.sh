@@ -9,6 +9,11 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp Sources/IvansMenu/Info.plist "$APP/Contents/Info.plist"
 cp .build/release/IvansMenu "$APP/Contents/MacOS/IvansMenu"
 
+# App icon (CFBundleIconFile=AppIcon → Contents/Resources/AppIcon.icns).
+if [ -f Sources/IvansMenu/Resources/AppIcon.icns ]; then
+  cp Sources/IvansMenu/Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+fi
+
 # Copy SPM resource bundle if present
 BUNDLE=$(find -L .build/release -maxdepth 1 -name "*IvansMenu*.bundle" | head -1 || true)
 if [ -n "${BUNDLE:-}" ]; then cp -R "$BUNDLE" "$APP/Contents/Resources/"; fi
