@@ -19,8 +19,10 @@ BUNDLE=$(find -L .build/release -maxdepth 1 -name "*IvansMenu*.bundle" | head -1
 if [ -n "${BUNDLE:-}" ]; then cp -R "$BUNDLE" "$APP/Contents/Resources/"; fi
 
 if [ -n "${DEVELOPER_ID:-}" ]; then
-  codesign --deep --force --options runtime \
+  # Hardened runtime + secure timestamp are both required for notarization.
+  codesign --deep --force --options runtime --timestamp \
     --sign "$DEVELOPER_ID" "$APP"
+  codesign --verify --strict --verbose=2 "$APP"
   echo "Signed with $DEVELOPER_ID"
 else
   echo "Set DEVELOPER_ID to code-sign (e.g. 'Developer ID Application: Name (TEAMID)')."
