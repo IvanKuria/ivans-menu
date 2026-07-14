@@ -17,5 +17,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             v.layer?.backgroundColor = NSColor.wiiBGCenter.cgColor
             return v
         }
+
+        if config.settings.hideDesktopIcons { DesktopIcons.setHidden(true) }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        if config.settings.hideDesktopIcons { DesktopIcons.setHidden(false) }
     }
 }
