@@ -13,6 +13,7 @@ final class WiiMenuView: NSView {
     private let leftArrow = NSButton(title: "◀", target: nil, action: nil)
     private let rightArrow = NSButton(title: "▶", target: nil, action: nil)
     private var gridContainer = NSView()
+    private var tiles: [ChannelTileView] = []
 
     init(config: AppConfig, renderer: BannerRenderer) {
         self.config = config; self.renderer = renderer
@@ -49,14 +50,16 @@ final class WiiMenuView: NSView {
 
     private func rebuildGrid() {
         gridContainer.subviews.forEach { $0.removeFromSuperview() }
+        tiles.removeAll()
         let start = currentPage * Theme.slotsPerPage
         for i in 0..<Theme.slotsPerPage {
             let slot = start + i
-            guard let channel = config.channels.first(where: { $0.slot == slot }) else { continue }
+            let channel = config.channels.first(where: { $0.slot == slot }) ?? Channel(slot: slot)
             let img = renderer.image(for: channel, size: NSSize(width: 320, height: 176))
             let tile = ChannelTileView(channel: channel, image: img)
             tile.onLaunch = { [weak self] c in self?.onLaunch(c) }
             gridContainer.addSubview(tile)
+            tiles.append(tile)
         }
         needsLayout = true
     }
@@ -75,13 +78,13 @@ final class WiiMenuView: NSView {
         let cellH = cellW / Theme.tileAspect
         let totalH = cellH*CGFloat(rows) + gutter*CGFloat(rows-1)
         let topY = (gridArea.height + totalH)/2 - cellH
-        for (idx, tile) in gridContainer.subviews.enumerated() {
-            let r = idx / cols, c = idx % cols
+        for (i, tile) in tiles.enumerated() {
+            let r = i / cols, c = i % cols
             tile.frame = NSRect(x: margin + CGFloat(c)*(cellW+gutter),
                                 y: topY - CGFloat(r)*(cellH+gutter),
                                 width: cellW, height: cellH)
         }
-        leftArrow.frame = NSRect(x: 8, y: bounds.midY, width: 44, height: 60)
-        rightArrow.frame = NSRect(x: bounds.width-52, y: bounds.midY, width: 44, height: 60)
+        leftArrow.frame = NSRect(x: 8, y: bounds.midY - 30, width: 44, height: 60)
+        rightArrow.frame = NSRect(x: bounds.width-52, y: bounds.midY - 30, width: 44, height: 60)
     }
 }

@@ -1,5 +1,6 @@
 import AppKit
 import IvansMenuKit
+import UniformTypeIdentifiers
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -19,7 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if case .app(let path) = action {
                     return NSWorkspace.shared.icon(forFile: path)
                 }
-                return NSWorkspace.shared.icon(forFileType: "public.data")
+                return NSWorkspace.shared.icon(for: UTType.data)
             })
         windowController.rebuild { [weak self] _ in
             guard let self else { return NSView() }

@@ -39,7 +39,7 @@ final class ChannelTileView: NSView {
             layer?.borderWidth = on ? 4 : 0
             layer?.borderColor = NSColor.white.cgColor
             let scale: CGFloat = on ? 1.0 : Theme.hoverScaleFrom
-            animator().layer?.setAffineTransform(CGAffineTransform(scaleX: scale, y: scale))
+            layer?.setAffineTransform(CGAffineTransform(scaleX: scale, y: scale))
         }
     }
 
