@@ -112,9 +112,10 @@ enum WiiDraw {
     }
 
     /// A blue glossy page chevron pointing left or right, filling `rect`.
+    /// Drawn crisp with rounded corners + gloss + glow (no low-res rip).
     static func chevron(in rect: NSRect, pointingLeft: Bool, hovered: Bool) {
         let d = min(rect.width, rect.height)
-        let inset = rect.insetBy(dx: d * 0.18, dy: d * 0.12)
+        let inset = rect.insetBy(dx: d * 0.22, dy: d * 0.16)
         let tri = NSBezierPath()
         if pointingLeft {
             tri.move(to: NSPoint(x: inset.minX, y: inset.midY))
@@ -129,19 +130,24 @@ enum WiiDraw {
         tri.lineJoinStyle = .round
 
         NSGraphicsContext.saveGraphicsState()
-        if hovered {
-            let glow = NSShadow()
-            glow.shadowColor = WiiPalette.accent.withAlphaComponent(0.9)
-            glow.shadowBlurRadius = d * 0.12
-            glow.shadowOffset = .zero
-            glow.set()
-        }
+        let glow = NSShadow()
+        glow.shadowColor = WiiPalette.accent.withAlphaComponent(hovered ? 0.95 : 0.55)
+        glow.shadowBlurRadius = d * (hovered ? 0.16 : 0.09)
+        glow.shadowOffset = .zero
+        glow.set()
+        // Round the corners by first stroking the outline thickly in the deep blue.
+        WiiPalette.accentDeep.setStroke()
+        tri.lineWidth = d * 0.16
+        tri.stroke()
+        NSGraphicsContext.restoreGraphicsState()
+
+        // Glossy fill: lighter at the top.
         let grad = NSGradient(colors: [WiiPalette.accentLight, WiiPalette.accentDeep],
                               atLocations: [0, 1], colorSpace: .sRGB)!
         grad.draw(in: tri, angle: -90)
-        NSGraphicsContext.restoreGraphicsState()
-        NSColor.white.withAlphaComponent(0.85).setStroke()
-        tri.lineWidth = max(1.5, d * 0.03)
+        // Bright top edge highlight.
+        NSColor.white.withAlphaComponent(0.9).setStroke()
+        tri.lineWidth = max(1.5, d * 0.025)
         tri.stroke()
     }
 
@@ -278,10 +284,12 @@ final class WiiOrbButton: NSControl {
     private var pressed = false { didSet { needsDisplay = true } }
     private var tracking: NSTrackingArea?
 
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
     override func draw(_ dirtyRect: NSRect) {
-        // Prefer real Wii art if installed; otherwise draw the orb in Core Graphics.
-        let asset: WiiAsset = (symbol == .wii) ? .wiiButton : .mailButton
-        if let img = AssetLibrary.shared.image(asset) {
+        // The Wii button has a high-res rip; the mail button has none, so it's
+        // drawn crisply in Core Graphics (a low-res rip would look worse).
+        if symbol == .wii, let img = AssetLibrary.shared.image(.wiiButton) {
             if hovered { WiiDraw.orbGlow(in: bounds) }
             let rect = pressed ? bounds.insetBy(dx: bounds.width * 0.02, dy: bounds.height * 0.02) : bounds
             img.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1)
@@ -319,13 +327,10 @@ final class WiiArrowButton: NSControl {
     private var hovered = false { didSet { needsDisplay = true } }
     private var tracking: NSTrackingArea?
 
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
     override func draw(_ dirtyRect: NSRect) {
-        let asset: WiiAsset = pointingLeft ? .arrowLeft : .arrowRight
-        if let img = AssetLibrary.shared.image(asset) {
-            let f: CGFloat = hovered ? 1.0 : 0.9
-            img.draw(in: bounds, from: .zero, operation: .sourceOver, fraction: f)
-            return
-        }
+        // No high-res arrow rip exists, so draw a crisp vector chevron.
         WiiDraw.chevron(in: bounds, pointingLeft: pointingLeft, hovered: hovered)
     }
     override func updateTrackingAreas() {

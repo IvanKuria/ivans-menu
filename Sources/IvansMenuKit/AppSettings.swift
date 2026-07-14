@@ -7,7 +7,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var menuDisplayID: String?
     public var peekHotKeyEnabled: Bool
 
-    public init(soundEnabled: Bool = true, musicEnabled: Bool = false,
+    public init(soundEnabled: Bool = true, musicEnabled: Bool = true,
                 hideDesktopIcons: Bool = true, menuDisplayID: String? = nil,
                 peekHotKeyEnabled: Bool = true) {
         self.soundEnabled = soundEnabled; self.musicEnabled = musicEnabled

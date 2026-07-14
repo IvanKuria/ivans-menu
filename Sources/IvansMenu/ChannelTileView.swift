@@ -88,6 +88,8 @@ final class ChannelTileView: NSView {
         addTrackingArea(t); tracking = t
     }
 
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
     override func mouseEntered(with event: NSEvent) { setHover(true) }
     override func mouseExited(with event: NSEvent) { setHover(false) }
 
